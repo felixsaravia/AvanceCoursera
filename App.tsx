@@ -1,8 +1,4 @@
 
-
-
-
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Student, Status, CommunityQuestion, Answer } from './types';
 import { MOCK_NAMES, TOTAL_COURSES, MAX_POINTS_PER_COURSE, TOTAL_MAX_POINTS, STATUS_CONFIG, schedule } from './constants';
@@ -74,7 +70,7 @@ const orderedStatuses: Status[] = [
     Status.SinIniciar
 ];
 
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxyecZuqynX9k9ttpyIBmcoJZirHXUd1g5eTFhHfFR-ggHNHp5NvGSZoZ80g4_eGWRE/exec';
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxiTI7pcAYDf9q21OoforACNDhzKS_ph0hb-C02VuFxd8n6vqJDbnsrluazMkv9r5705A/exec';
 
 const App: React.FC = () => {
   const [studentNames, setStudentNames] = useState<string[]>(MOCK_NAMES);
@@ -92,7 +88,7 @@ const App: React.FC = () => {
   const [driveFolderUrl, setDriveFolderUrl] = useState<string>('');
   const [tempDriveFolderUrl, setTempDriveFolderUrl] = useState<string>('');
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({ time: null, status: 'idle' });
-  const [autoSync, setAutoSync] = useState<boolean>(false);
+  const autoSync = true; // Auto-sync is now permanently enabled
   const isInitialLoad = useRef(true);
 
 
@@ -144,33 +140,35 @@ const App: React.FC = () => {
             initializeStudents(MOCK_NAMES);
         }
         setSyncStatus({ status: 'success', time: new Date(), message: 'Datos cargados correctamente.' });
-        return true;
-    } catch (error) {
-        console.error("Failed to fetch from Google Sheets:", error);
-        const errorMessage = `Error al cargar: ${error.message}. Verifica tu conexión a internet.`;
+    } catch (error: any) {
+        console.error("Failed to fetch from Google Sheets, using fallback:", error);
+        let errorMessage = `Error al cargar: ${error.message}. Se usará la lista de respaldo.`;
+        if (typeof error.message === 'string' && error.message.includes('no fue encontrada')) {
+            errorMessage = 'Error de conexión: No se encontró la hoja "Alumnas". Por favor, sigue las instrucciones para actualizar el script de Google.';
+        }
         setSyncStatus({ status: 'error', time: new Date(), message: errorMessage });
-        return false;
+        initializeStudents(MOCK_NAMES);
     }
   }, [initializeStudents]);
 
   // Load config from localStorage on initial mount
   useEffect(() => {
-      const savedAutoSync = localStorage.getItem('autoSync') === 'true';
       const savedDriveUrl = localStorage.getItem('driveFolderUrl') || '';
-      setAutoSync(savedAutoSync);
       setDriveFolderUrl(savedDriveUrl);
       setTempDriveFolderUrl(savedDriveUrl);
   }, []);
   
   // Initial data load logic
   useEffect(() => {
-    if (!isInitialLoad.current) return;
-    isInitialLoad.current = false;
+    if (isInitialLoad.current) {
+        isInitialLoad.current = false;
 
-    // Always initialize with the local MOCK_NAMES to ensure the updated list is shown.
-    initializeStudents(MOCK_NAMES);
-    initializeCommunityQuestions();
-}, [initializeStudents, initializeCommunityQuestions]);
+        // Fetch data from Google Sheets on initial load.
+        // The fetchInitialData function handles the fallback to MOCK_NAMES.
+        fetchInitialData();
+        initializeCommunityQuestions();
+    }
+  }, [fetchInitialData, initializeCommunityQuestions]);
 
   const handleUpdateStudentProgress = useCallback((studentId: number, courseIndex: number, newProgress: number) => {
     setStudents(currentStudents =>
@@ -439,7 +437,7 @@ const App: React.FC = () => {
             } else {
                 throw new Error('No se encontraron nombres válidos en el archivo CSV.');
             }
-        } catch (error) {
+        } catch (error: any) {
             alert(`Error al procesar el archivo: ${error.message}`);
         }
         event.target.value = '';
@@ -453,24 +451,24 @@ const App: React.FC = () => {
     setDriveFolderUrl(tempDriveFolderUrl);
     alert('URL de la carpeta de Drive guardada correctamente.');
   }, [tempDriveFolderUrl]);
-
-  const handleToggleAutoSync = (checked: boolean) => {
-      setAutoSync(checked);
-      localStorage.setItem('autoSync', String(checked));
-  };
   
   const syncData = useCallback(async () => {
       if (syncStatus.status === 'syncing') return;
       setSyncStatus({ status: 'syncing', time: null, message: 'Sincronizando...' });
       
       try {
+        const payload = JSON.stringify(processedStudents);
+
+        // Sending data as 'application/x-www-form-urlencoded' is a more robust method
+        // for Google Apps Script, as it avoids CORS preflight issues and is easily parsed
+        // on the backend using e.parameter.payload.
         const response = await fetch(GOOGLE_SCRIPT_URL, {
             method: 'POST',
-            mode: 'cors',
-            cache: 'no-cache',
-            headers: { 'Content-Type': 'text/plain' }, // Use text/plain for doPost
-            body: JSON.stringify(processedStudents), // Send the full processed student data
-            redirect: 'follow'
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({ 'payload': payload }),
+            redirect: 'follow',
         });
         
         if (response.ok) {
@@ -480,9 +478,9 @@ const App: React.FC = () => {
             throw new Error(errorText || `Error del servidor: ${response.status}`);
         }
 
-      } catch (error) {
+      } catch (error: any) {
          console.error("Sync failed:", error);
-         const errorMessage = `Error de sincronización: ${error.message}. Verifica tu conexión a internet.`;
+         const errorMessage = `Error de sincronización: ${error.message}. Revisa la conexión o la configuración del script de Google.`;
          setSyncStatus({ status: 'error', time: new Date(), message: errorMessage });
       }
   }, [processedStudents, syncStatus.status]);
@@ -558,7 +556,7 @@ const App: React.FC = () => {
             Registro de puntajes y estado de la certificación en tiempo real.
           </p>
         </header>
-
+        
         {activeView === 'monitor' && (
           <div>
             <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
@@ -601,144 +599,162 @@ const App: React.FC = () => {
             
             <div className="mb-6">
                 <p className="text-sm text-slate-400 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                    Haz clic en un puntaje (C1-C{TOTAL_COURSES}) para editarlo.
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
+                    Haz clic en la celda de un curso (C1, C2, etc.) para editar el puntaje de una estudiante.
                 </p>
             </div>
-
-            <main>
-              <LeaderboardTable students={processedStudents} onUpdateProgress={handleUpdateStudentProgress} />
-            </main>
+            
+            <LeaderboardTable students={processedStudents} onUpdateProgress={handleUpdateStudentProgress} />
           </div>
         )}
-        
-        {activeView === 'verification' && (
-          <VerificationView students={processedStudents} onUpdateVerification={handleUpdateVerificationStatus} />
-        )}
 
-        {activeView === 'certificates' && (
-          <CertificatesView 
-            students={processedStudents} 
-            onUpdateCertificateStatus={handleUpdateCertificateStatus}
-            onUpdateOtherStatus={handleUpdateOtherCertificateStatus}
-          />
-        )}
-        
-        {activeView === 'tools' && (
-          <ToolsView />
-        )}
-
-        {activeView === 'help' && (
-          <HelpView
-            questions={communityQuestions}
-            onAskQuestion={handleAskCommunityQuestion}
-            onAddAnswer={handleAddCommunityAnswer}
-            driveFolderUrl={driveFolderUrl}
-          />
-        )}
+        {activeView === 'verification' && <VerificationView students={processedStudents} onUpdateVerification={handleUpdateVerificationStatus} />}
+        {activeView === 'certificates' && <CertificatesView students={processedStudents} onUpdateCertificateStatus={handleUpdateCertificateStatus} onUpdateOtherStatus={handleUpdateOtherCertificateStatus} />}
+        {activeView === 'tools' && <ToolsView />}
+        {activeView === 'help' && <HelpView questions={communityQuestions} onAskQuestion={handleAskCommunityQuestion} onAddAnswer={handleAddCommunityAnswer} driveFolderUrl={driveFolderUrl} />}
 
         {activeView === 'config' && (
-          <section className="space-y-6">
+          <section className="space-y-8">
             <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
-                <h3 className="text-lg font-bold text-white mb-4">Configuración de Integraciones</h3>
-                <div className="space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                           <button onClick={syncData} disabled={syncStatus.status === 'syncing'} className="px-4 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed">
-                                {syncStatus.status === 'syncing' ? 'Sincronizando...' : 'Sincronizar Ahora'}
-                            </button>
-                            <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
-                                <input type="checkbox" checked={autoSync} onChange={e => handleToggleAutoSync(e.target.checked)} className="w-4 h-4 rounded bg-slate-600 text-sky-500 focus:ring-sky-500 border-slate-500" />
-                                Sincronización Automática
-                            </label>
-                        </div>
-                         <div className={`text-sm text-right ${syncStatus.status === 'error' ? 'text-red-400' : 'text-slate-400'}`}>
-                            <p title={syncStatus.message}>{syncStatus.message ? (syncStatus.message.length > 50 ? syncStatus.message.substring(0, 50) + '...' : syncStatus.message) : `Última sinc: ${formatSyncTime(syncStatus.time)}`}</p>
-                        </div>
+                <h2 className="text-xl font-bold text-white">Configuración General</h2>
+                <p className="text-slate-400 mt-1 mb-6">Ajusta los parámetros de cálculo y gestión del monitor.</p>
+                
+                <div className="space-y-6">
+                    <div>
+                        <label htmlFor="startDate" className="block text-sm font-medium text-slate-300">Fecha de Inicio del Bootcamp</label>
+                        <input
+                            type="date"
+                            id="startDate"
+                            value={startDate}
+                            onChange={e => setStartDate(e.target.value)}
+                            className="mt-1 block w-full sm:w-auto bg-slate-700 border-slate-600 rounded-md p-2 text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                        />
                     </div>
-                    <div className="pt-4 border-t border-slate-700">
-                        <label htmlFor="drive-url" className="text-sm font-medium text-slate-400 block mb-2">URL de Carpeta Compartida en Drive (para Certificados)</label>
-                        <div className="flex gap-2">
-                            <input id="drive-url" type="url" value={tempDriveFolderUrl} onChange={e => setTempDriveFolderUrl(e.target.value)} className="flex-grow bg-slate-700 border-slate-600 rounded-md p-2 text-white focus:ring-2 focus:ring-sky-500 focus:outline-none" placeholder="Pega la URL de la carpeta de Drive"/>
-                            <button onClick={handleSaveDriveUrl} className="px-4 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-500 transition-colors">Guardar</button>
+                    <div>
+                        <label htmlFor="totalWorkingDays" className="block text-sm font-medium text-slate-300">Total de Días Laborables</label>
+                        <input
+                            type="number"
+                            id="totalWorkingDays"
+                            value={totalWorkingDays}
+                            onChange={e => setTotalWorkingDays(parseInt(e.target.value, 10))}
+                            className="mt-1 block w-full sm:w-auto bg-slate-700 border-slate-600 rounded-md p-2 text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                        />
+                         <p className="text-xs text-slate-500 mt-1">Este valor se usa para calcular los puntos esperados por día.</p>
+                    </div>
+                    
+                    <div>
+                        <h3 className="text-sm font-medium text-slate-300">Períodos de Descanso (no se cuentan en el progreso)</h3>
+                        <div className="mt-2 space-y-2">
+                            {breaks.map(b => (
+                                <div key={b.id} className="flex items-center gap-2 bg-slate-800 p-2 rounded-md">
+                                    <span className="text-sm text-slate-400">
+                                        Del <span className="font-semibold text-white">{formatDate(b.start)}</span> al <span className="font-semibold text-white">{formatDate(b.end)}</span>
+                                    </span>
+                                    <button onClick={() => handleRemoveBreak(b.id)} className="ml-auto text-red-500 hover:text-red-400 p-1 rounded-full bg-red-500/10 hover:bg-red-500/20">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    </button>
+                                </div>
+                            ))}
                         </div>
-                        <p className="text-xs text-slate-500 mt-2">Este enlace aparecerá en la pestaña de Ayuda.</p>
+                        <div className="mt-4 flex flex-col sm:flex-row items-end gap-2">
+                             <div className="w-full">
+                                <label className="block text-xs font-medium text-slate-400">Inicio</label>
+                                <input type="date" value={newBreak.start} onChange={e => setNewBreak({ ...newBreak, start: e.target.value })} className="w-full bg-slate-700 border-slate-600 rounded-md p-2 text-white focus:ring-2 focus:ring-sky-500 focus:outline-none" />
+                             </div>
+                             <div className="w-full">
+                                <label className="block text-xs font-medium text-slate-400">Fin</label>
+                                <input type="date" value={newBreak.end} onChange={e => setNewBreak({ ...newBreak, end: e.target.value })} className="w-full bg-slate-700 border-slate-600 rounded-md p-2 text-white focus:ring-2 focus:ring-sky-500 focus:outline-none" />
+                            </div>
+                            <button onClick={handleAddBreak} className="w-full sm:w-auto flex-shrink-0 px-4 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors">Añadir</button>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-1 flex flex-col gap-6">
-                    <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
-                        <h3 className="text-lg font-bold text-white mb-4">Parámetros del Curso</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-sm font-medium text-slate-400 block mb-2">Fecha de Inicio</label>
-                                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-slate-700 border-slate-600 rounded-md p-2 text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"/>
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium text-slate-400 block mb-2">Días Laborables Totales</label>
-                                <input type="number" value={totalWorkingDays} onChange={e => setTotalWorkingDays(Number(e.target.value))} className="w-full bg-slate-700 border-slate-600 rounded-md p-2 text-white focus:ring-2 focus:ring-sky-500 focus:outline-none" placeholder="Ej: 64"/>
-                            </div>
-                        </div>
-                    </div>
+            <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
+              <h2 className="text-xl font-bold text-white mb-1">Gestión de Estudiantes</h2>
+              <p className="text-slate-400 mt-1 mb-6">Importa la lista de estudiantes desde un archivo CSV.</p>
+              
+              <div className="bg-slate-900/50 p-4 rounded-lg border border-dashed border-slate-600 text-center">
+                 <p className="text-sm text-slate-400 mb-2">
+                    El archivo debe ser formato CSV y tener una columna llamada <code className="bg-slate-700 px-1 py-0.5 rounded-md font-mono text-amber-400">Nombre</code>.
+                 </p>
+                 <label htmlFor="csv-upload" className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-slate-600 text-white font-semibold rounded-lg hover:bg-slate-500 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Importar CSV
+                 </label>
+                 <input id="csv-upload" type="file" className="hidden" accept=".csv" onChange={handleFileUpload} />
+              </div>
+            </div>
 
-                    <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
-                        <h3 className="text-lg font-bold text-white mb-4">Gestión de Datos Local</h3>
-                         <div className="space-y-3">
-                            <div>
-                                <p className="text-sm text-slate-400 mb-2">Carga una lista de estudiantes para reemplazar la actual.</p>
-                                <input type="file" id="csv-upload" className="hidden" accept=".csv" onChange={handleFileUpload}/>
-                                <label htmlFor="csv-upload" className="w-full text-center block cursor-pointer bg-slate-600 text-white font-semibold rounded-lg hover:bg-slate-500 transition-colors py-2 px-4">
-                                    Importar de CSV...
-                                </label>
-                            </div>
-                             <div>
-                                <p className="text-sm text-slate-400 mb-2">Guarda el estado actual de todos los estudiantes a un archivo.</p>
-                                 <button onClick={handleExportToCSV} className="w-full text-center block cursor-pointer bg-slate-600 text-white font-semibold rounded-lg hover:bg-slate-500 transition-colors py-2 px-4">
-                                     Exportar a CSV
-                                 </button>
-                            </div>
-                         </div>
-                    </div>
-                </div>
-                <div className="lg:col-span-2 bg-slate-800/50 p-6 rounded-lg border border-slate-700">
-                    <h3 className="text-lg font-bold text-white mb-4">Periodos de Descanso</h3>
-                    <div className="space-y-2 mb-6 max-h-40 overflow-y-auto pr-2">
-                        {breaks.length > 0 ? breaks.map(b => (
-                            <div key={b.id} className="flex justify-between items-center bg-slate-800 p-3 rounded-md">
-                                <p className="text-sm text-slate-300 font-medium">
-                                    {formatDate(b.start)} - {formatDate(b.end)}
-                                </p>
-                                <button onClick={() => handleRemoveBreak(b.id)} className="text-slate-500 hover:text-red-400 transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                </button>
-                            </div>
-                        )) : (
-                            <p className="text-sm text-slate-500 text-center py-4">No hay periodos de descanso definidos.</p>
-                        )}
-                    </div>
-                    <div className="pt-4 border-t border-slate-700">
-                         <h4 className="text-md font-semibold text-slate-300 mb-3">Agregar Descanso</h4>
-                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                            <div>
-                                <label className="text-sm font-medium text-slate-400 block mb-2">Inicio</label>
-                                 <input type="date" value={newBreak.start} onChange={e => setNewBreak({...newBreak, start: e.target.value})} className="w-full bg-slate-700 border-slate-600 rounded-md p-2 text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"/>
-                            </div>
-                             <div>
-                                <label className="text-sm font-medium text-slate-400 block mb-2">Fin</label>
-                                 <input type="date" value={newBreak.end} onChange={e => setNewBreak({...newBreak, end: e.target.value})} className="w-full bg-slate-700 border-slate-600 rounded-md p-2 text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"/>
-                            </div>
-                         </div>
-                         <button onClick={handleAddBreak} className="mt-4 w-full bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors py-2">
-                            Agregar Periodo
-                        </button>
-                    </div>
+             <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
+              <h2 className="text-xl font-bold text-white mb-1">Sincronización con Google Sheets</h2>
+              <div className="mt-4 bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                  <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                      <div>
+                          <p className="font-semibold text-white">Sincronización Automática</p>
+                          <p className="text-sm text-slate-400">
+                              La sincronización está activada. Los cambios se guardan automáticamente.
+                          </p>
+                      </div>
+                      <div className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-full ${
+                          syncStatus.status === 'success' ? 'bg-green-500/20 text-green-400' : 
+                          syncStatus.status === 'error' ? 'bg-red-500/20 text-red-400' :
+                          'bg-sky-500/20 text-sky-400'
+                      }`}>
+                          {syncStatus.status === 'syncing' && <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
+                          <span>Última sinc: {formatSyncTime(syncStatus.time)}</span>
+                      </div>
+                  </div>
+                  {syncStatus.status === 'error' && syncStatus.message && (
+                      <p className="text-xs text-red-400 mt-3">{syncStatus.message}</p>
+                  )}
+              </div>
+            </div>
+
+            <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
+                <h2 className="text-xl font-bold text-white mb-1">Exportar e Importar Datos</h2>
+                <p className="text-slate-400 mt-1 mb-6">Guarda una copia de seguridad o reinicia el monitor con nuevos datos.</p>
+                 <div className="flex flex-col sm:flex-row gap-4">
+                    <button 
+                        onClick={handleExportToCSV}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600/80 text-white font-semibold rounded-lg hover:bg-green-600 transition-colors"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Exportar a CSV
+                    </button>
+                     <button
+                        onClick={() => {
+                            if (window.confirm('¿Estás seguro de que quieres reiniciar la aplicación? Se perderán todos los datos no guardados y se cargará la lista de estudiantes original.')) {
+                                initializeStudents(MOCK_NAMES);
+                                initializeCommunityQuestions();
+                                alert('La aplicación ha sido reiniciada.');
+                            }
+                        }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600/80 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors"
+                    >
+                       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                       Reiniciar Aplicación
+                    </button>
+                 </div>
+            </div>
+
+            <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
+                <h2 className="text-xl font-bold text-white mb-1">Carpeta de Certificados en Drive</h2>
+                <p className="text-slate-400 mt-1 mb-4">Introduce la URL de la carpeta de Google Drive donde se almacenan los certificados para que las estudiantes puedan acceder a ella desde la pestaña de Ayuda.</p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                     <input 
+                        type="url"
+                        value={tempDriveFolderUrl}
+                        onChange={e => setTempDriveFolderUrl(e.target.value)}
+                        placeholder="https://drive.google.com/drive/folders/..."
+                        className="w-full bg-slate-700 border-slate-600 rounded-md p-2 text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                     />
+                     <button onClick={handleSaveDriveUrl} className="flex-shrink-0 px-4 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors">Guardar URL</button>
                 </div>
             </div>
-        </section>
+          </section>
         )}
-
         <BottomNav activeView={activeView} setActiveView={setActiveView} />
       </div>
     </div>
