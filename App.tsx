@@ -1,6 +1,8 @@
 
 
 
+
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Student, Status, CommunityQuestion, Answer } from './types';
 import { MOCK_NAMES, TOTAL_COURSES, MAX_POINTS_PER_COURSE, TOTAL_MAX_POINTS, STATUS_CONFIG, schedule } from './constants';
@@ -72,7 +74,7 @@ const orderedStatuses: Status[] = [
     Status.SinIniciar
 ];
 
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbws3ash5SdBepexz3F_ePw6KNSBM9U8ooOZm78btj0bIT0SjhQ_nUwpE3nVkse14q-I/exec';
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxyecZuqynX9k9ttpyIBmcoJZirHXUd1g5eTFhHfFR-ggHNHp5NvGSZoZ80g4_eGWRE/exec';
 
 const App: React.FC = () => {
   const [studentNames, setStudentNames] = useState<string[]>(MOCK_NAMES);
