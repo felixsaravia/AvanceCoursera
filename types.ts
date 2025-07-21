@@ -1,3 +1,4 @@
+
 export enum Status {
   Finalizada = 'Finalizada',
   EliteII = 'Elite II',
@@ -42,4 +43,10 @@ export interface ScheduleItem {
   date: string; // YYYY-MM-DD
   course: string;
   module: string;
+}
+
+export interface Break {
+    id: number;
+    start: string;
+    end: string;
 }

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Student, Status, CommunityQuestion, Answer } from './types';
-import { MOCK_NAMES, TOTAL_COURSES, MAX_POINTS_PER_COURSE, TOTAL_MAX_POINTS, STATUS_CONFIG, schedule } from './constants';
+import { Student, Status, CommunityQuestion, Answer, ScheduleItem, Break } from './types';
+import { MOCK_NAMES, TOTAL_COURSES, MAX_POINTS_PER_COURSE, TOTAL_MAX_POINTS, STATUS_CONFIG, schedule, orderedStatuses } from './constants';
 import LeaderboardTable from './components/LeaderboardTable';
 import AIAnalyzer from './components/AIAnalyzer';
 import BottomNav from './components/BottomNav';
@@ -10,33 +10,17 @@ import CertificatesView from './components/CertificatesView';
 import HelpView from './components/HelpView';
 import ToolsView from './components/ToolsView';
 
-/**
- * Parses a 'YYYY-MM-DD' date string into a Date object at UTC midnight.
- * This method is more robust than `new Date(string)` as it avoids
- * browser-specific and timezone-related parsing issues.
- * @param dateString The date string in 'YYYY-MM-DD' format.
- * @returns A Date object set to midnight UTC for the given date.
- */
 const parseDateAsUTC = (dateString: string): Date => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-    return new Date(NaN); // Return invalid date for downstream checking
+    return new Date(NaN);
   }
   const [year, month, day] = dateString.split('-').map(Number);
-  // Month is 0-indexed in Date.UTC (e.g., January is 0)
   return new Date(Date.UTC(year, month - 1, day));
 };
 
-/**
- * Gets the current date normalized to UTC midnight, but adjusted for the
- * El Salvador timezone (GTM-6).
- * @returns A Date object representing today's date in El Salvador at UTC midnight.
- */
 const getTodayInElSalvador = (): Date => {
   const now = new Date();
-  // El Salvador is UTC-6. Get current UTC time and subtract 6 hours.
   const elSalvadorTime = new Date(now.getTime() - (6 * 60 * 60 * 1000));
-  // Return a new Date object representing midnight UTC for that El Salvador date.
-  // This standardizes the time part to avoid time-of-day issues in comparisons.
   return new Date(Date.UTC(
     elSalvadorTime.getUTCFullYear(),
     elSalvadorTime.getUTCMonth(),
@@ -44,12 +28,6 @@ const getTodayInElSalvador = (): Date => {
   ));
 };
 
-
-interface Break {
-    id: number;
-    start: string;
-    end: string;
-}
 
 export type ActiveView = 'monitor' | 'verification' | 'certificates' | 'config' | 'help' | 'tools';
 
@@ -59,18 +37,117 @@ type SyncStatus = {
     message?: string;
 };
 
-const orderedStatuses: Status[] = [
-    Status.Finalizada,
-    Status.EliteII,
-    Status.EliteI,
-    Status.Avanzada,
-    Status.AlDia,
-    Status.Atrasada,
-    Status.Riesgo,
-    Status.SinIniciar
-];
-
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxiTI7pcAYDf9q21OoforACNDhzKS_ph0hb-C02VuFxd8n6vqJDbnsrluazMkv9r5705A/exec';
+
+const formatSyncTime = (date: Date | null) => {
+    if (!date) return 'nunca';
+    return date.toLocaleTimeString('es-ES');
+};
+
+const SyncHeader: React.FC<{ syncStatus: SyncStatus; onSync: () => void; }> = ({ syncStatus, onSync }) => (
+    <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+      <div>
+        <p className="font-semibold text-white">Sincronización con Google Sheets</p>
+        <p className={`text-sm ${
+          syncStatus.status === 'success' ? 'text-green-400' : 
+          syncStatus.status === 'error' ? 'text-red-400' :
+          'text-slate-400'
+        }`}>
+          {syncStatus.message || `Última sinc: ${formatSyncTime(syncStatus.time)}`}
+        </p>
+      </div>
+      <button
+        onClick={onSync}
+        disabled={syncStatus.status === 'syncing'}
+        className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed"
+      >
+        {syncStatus.status === 'syncing' ? (
+          <>
+            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            Sincronizando...
+          </>
+        ) : (
+          <>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Sincronizar Ahora
+          </>
+        )}
+      </button>
+    </div>
+);
+
+const ConfigView: React.FC<{
+  startDate: string;
+  setStartDate: (date: string) => void;
+  totalWorkingDays: number;
+  setTotalWorkingDays: (days: number) => void;
+  breaks: Break[];
+  newBreak: { start: string, end: string };
+  setNewBreak: (b: { start: string, end: string }) => void;
+  handleAddBreak: () => void;
+  handleRemoveBreak: (id: number) => void;
+  handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleExportToCSV: () => void;
+  initializeStudents: () => void;
+  syncStatus: SyncStatus;
+}> = ({
+  startDate, setStartDate, totalWorkingDays, setTotalWorkingDays,
+  breaks, newBreak, setNewBreak, handleAddBreak, handleRemoveBreak,
+  handleFileUpload, handleExportToCSV, initializeStudents, syncStatus
+}) => (
+    <section className="space-y-8">
+        <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
+            <h2 className="text-xl font-bold text-white mb-4">Parámetros del Curso</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label htmlFor="start-date" className="block text-sm font-medium text-slate-300 mb-2">Fecha de Inicio del Curso</label>
+                    <input type="date" id="start-date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-slate-700 border-slate-600 rounded-md p-2 text-white focus:ring-2 focus:ring-sky-500" />
+                </div>
+                <div>
+                    <label htmlFor="total-days" className="block text-sm font-medium text-slate-300 mb-2">Total de Días Laborales</label>
+                    <input type="number" id="total-days" value={totalWorkingDays} onChange={e => setTotalWorkingDays(parseInt(e.target.value, 10))} className="w-full bg-slate-700 border-slate-600 rounded-md p-2 text-white focus:ring-2 focus:ring-sky-500" />
+                </div>
+            </div>
+        </div>
+
+        <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
+            <h2 className="text-xl font-bold text-white mb-4">Períodos de Descanso</h2>
+            <div className="space-y-4 mb-6">
+                {breaks.map(b => (
+                    <div key={b.id} className="flex items-center justify-between bg-slate-800 p-3 rounded-md">
+                        <p className="text-slate-300">Del <span className="font-semibold text-sky-400">{b.start}</span> al <span className="font-semibold text-sky-400">{b.end}</span></p>
+                        <button onClick={() => handleRemoveBreak(b.id)} className="text-red-500 hover:text-red-400">&times;</button>
+                    </div>
+                ))}
+            </div>
+            <div className="flex flex-col md:flex-row items-center gap-4">
+                <input type="date" value={newBreak.start} onChange={e => setNewBreak({ ...newBreak, start: e.target.value })} className="flex-1 w-full md:w-auto bg-slate-700 border-slate-600 rounded-md p-2 text-white" />
+                <input type="date" value={newBreak.end} onChange={e => setNewBreak({ ...newBreak, end: e.target.value })} className="flex-1 w-full md:w-auto bg-slate-700 border-slate-600 rounded-md p-2 text-white" />
+                <button onClick={handleAddBreak} className="w-full md:w-auto px-4 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500">Añadir</button>
+            </div>
+        </div>
+
+        <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
+            <h2 className="text-xl font-bold text-white mb-4">Gestión de Estudiantes</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <label className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-600 text-white font-semibold rounded-lg hover:bg-slate-500 transition-colors cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Importar CSV
+                    <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" />
+                </label>
+                <button onClick={handleExportToCSV} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-600 text-white font-semibold rounded-lg hover:bg-slate-500 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Exportar CSV
+                </button>
+                 <button onClick={() => { if(window.confirm('¿Seguro que quieres reiniciar la lista de estudiantes a la original? Se perderán todos los cambios no sincronizados.')) initializeStudents(); }} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-500 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    Reiniciar Lista
+                </button>
+            </div>
+        </div>
+    </section>
+);
+
 
 const App: React.FC = () => {
   const [studentNames, setStudentNames] = useState<string[]>(MOCK_NAMES);
@@ -84,15 +161,12 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<ActiveView>('monitor');
   const [communityQuestions, setCommunityQuestions] = useState<CommunityQuestion[]>([]);
   
-  // State for Google Sheets Sync
   const [driveFolderUrl, setDriveFolderUrl] = useState<string>('');
-  const [tempDriveFolderUrl, setTempDriveFolderUrl] = useState<string>('');
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({ time: null, status: 'idle' });
-  const autoSync = true; // Auto-sync is now permanently enabled
   const isInitialLoad = useRef(true);
 
 
-  const initializeStudents = useCallback((names: string[]) => {
+  const initializeStudents = useCallback((names: string[] = MOCK_NAMES) => {
     const initialStudents = names.map((name, index) => ({
       id: index + 1,
       name,
@@ -112,20 +186,17 @@ const App: React.FC = () => {
   }, []);
 
   const fetchInitialData = useCallback(async () => {
-    console.log("Attempting to fetch initial data from Google Sheets...");
     setSyncStatus({ status: 'syncing', time: null, message: 'Cargando datos iniciales...' });
     try {
         const response = await fetch(GOOGLE_SCRIPT_URL, { method: 'GET', redirect: 'follow' });
-        if (!response.ok) {
-            throw new Error(`Error en la respuesta del servidor: ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`Error en la respuesta del servidor: ${response.statusText}`);
+        
         const data = await response.json();
         if (data.error) throw new Error(data.error);
         
-        console.log(`Fetched ${data.length} students from Google Sheets.`);
         if(Array.isArray(data) && data.length > 0) {
             const fetchedStudents = data.map((s, index) => ({
-              id: index + 1, // Re-assign IDs for consistency
+              id: index + 1,
               name: s.name,
               courseProgress: s.courseProgress || Array(TOTAL_COURSES).fill(0),
               identityVerified: s.identityVerified || false,
@@ -136,35 +207,31 @@ const App: React.FC = () => {
             }));
             setStudents(fetchedStudents);
             setStudentNames(fetchedStudents.map(s => s.name));
+            setSyncStatus({ status: 'success', time: new Date(), message: 'Datos cargados correctamente.' });
         } else {
             initializeStudents(MOCK_NAMES);
+            setSyncStatus({ status: 'idle', time: null, message: 'Se cargó la lista de respaldo. Sincroniza para guardar.' });
         }
-        setSyncStatus({ status: 'success', time: new Date(), message: 'Datos cargados correctamente.' });
+        
     } catch (error: any) {
         console.error("Failed to fetch from Google Sheets, using fallback:", error);
         let errorMessage = `Error al cargar: ${error.message}. Se usará la lista de respaldo.`;
         if (typeof error.message === 'string' && error.message.includes('no fue encontrada')) {
-            errorMessage = 'Error de conexión: No se encontró la hoja "Alumnas". Por favor, sigue las instrucciones para actualizar el script de Google.';
+            errorMessage = 'Error de conexión: No se encontró la hoja "Alumnas".';
         }
         setSyncStatus({ status: 'error', time: new Date(), message: errorMessage });
         initializeStudents(MOCK_NAMES);
     }
   }, [initializeStudents]);
 
-  // Load config from localStorage on initial mount
   useEffect(() => {
       const savedDriveUrl = localStorage.getItem('driveFolderUrl') || '';
       setDriveFolderUrl(savedDriveUrl);
-      setTempDriveFolderUrl(savedDriveUrl);
   }, []);
   
-  // Initial data load logic
   useEffect(() => {
     if (isInitialLoad.current) {
         isInitialLoad.current = false;
-
-        // Fetch data from Google Sheets on initial load.
-        // The fetchInitialData function handles the fallback to MOCK_NAMES.
         fetchInitialData();
         initializeCommunityQuestions();
     }
@@ -198,21 +265,14 @@ const App: React.FC = () => {
 
     const firstDate = parseDateAsUTC(schedule[0].date);
     if (isNaN(firstDate.getTime()) || today.getTime() < firstDate.getTime()) {
-        return {
-            course: 'El curso aún no ha comenzado',
-            module: `Inicia el ${formatDate(schedule[0].date)}`
-        };
+        return { course: 'El curso aún no ha comenzado', module: `Inicia el ${formatDate(schedule[0].date)}` };
     }
 
     const lastDate = parseDateAsUTC(schedule[schedule.length - 1].date);
     if (!isNaN(lastDate.getTime()) && today.getTime() > lastDate.getTime()) {
-         return {
-            course: '¡Curso Finalizado!',
-            module: 'Felicidades por completar el programa.'
-        };
+         return { course: '¡Curso Finalizado!', module: 'Felicidades por completar el programa.' };
     }
 
-    // Find the most recent task that is on or before today
     let currentTask = null;
     for (let i = schedule.length - 1; i >= 0; i--) {
         const itemDate = parseDateAsUTC(schedule[i].date);
@@ -246,15 +306,12 @@ const App: React.FC = () => {
 
     const isDateInBreaks = (date: Date): boolean => {
         for (const breakPeriod of parsedBreaks) {
-            if (date.getTime() >= breakPeriod.start.getTime() && date.getTime() <= breakPeriod.end.getTime()) {
-                return true;
-            }
+            if (date.getTime() >= breakPeriod.start.getTime() && date.getTime() <= breakPeriod.end.getTime()) return true;
         }
         return false;
     };
     
     const pointsPerDay = TOTAL_MAX_POINTS / totalWorkingDays;
-    
     const today = getTodayInElSalvador();
     let elapsedWorkingDays = 0;
 
@@ -271,30 +328,19 @@ const App: React.FC = () => {
     
     const calculated = students.map(student => {
       const totalPoints = student.courseProgress.reduce((sum, current) => sum + current, 0);
-      
       let status: Status;
 
-      if (totalPoints >= TOTAL_MAX_POINTS) {
-        status = Status.Finalizada;
-      } else if (totalPoints === 0) {
-        status = Status.SinIniciar;
-      } else {
+      if (totalPoints >= TOTAL_MAX_POINTS) status = Status.Finalizada;
+      else if (totalPoints === 0) status = Status.SinIniciar;
+      else {
         const difference = totalPoints - finalExpectedPoints;
-        if (difference >= 150) {
-          status = Status.EliteII;
-        } else if (difference >= 100) {
-          status = Status.EliteI;
-        } else if (difference > 0) {
-          status = Status.Avanzada;
-        } else if (difference >= -25) {
-          status = Status.AlDia;
-        } else if (difference >= -75) {
-          status = Status.Atrasada;
-        } else { // difference < -75
-          status = Status.Riesgo;
-        }
+        if (difference >= 150) status = Status.EliteII;
+        else if (difference >= 100) status = Status.EliteI;
+        else if (difference > 0) status = Status.Avanzada;
+        else if (difference >= -25) status = Status.AlDia;
+        else if (difference >= -75) status = Status.Atrasada;
+        else status = Status.Riesgo;
       }
-      
       return { ...student, totalPoints, expectedPoints: finalExpectedPoints, status };
     });
 
@@ -305,17 +351,8 @@ const App: React.FC = () => {
   }, [students, startDate, totalWorkingDays, breaks]);
 
   const statusCounts = useMemo(() => {
-    const counts: Record<Status, number> = {
-        [Status.Finalizada]: 0,
-        [Status.EliteII]: 0,
-        [Status.EliteI]: 0,
-        [Status.Avanzada]: 0,
-        [Status.AlDia]: 0,
-        [Status.Atrasada]: 0,
-        [Status.Riesgo]: 0,
-        [Status.SinIniciar]: 0,
-    };
-
+    const counts: Record<Status, number> = {} as any;
+    orderedStatuses.forEach(s => counts[s] = 0);
     for (const student of processedStudents) {
         counts[student.status]++;
     }
@@ -326,11 +363,8 @@ const App: React.FC = () => {
     setStudents(currentStudents =>
       currentStudents.map(student => {
         if (student.id === studentId) {
-          if (verificationType === 'identity') {
-            return { ...student, identityVerified: !student.identityVerified };
-          } else {
-            return { ...student, twoFactorVerified: !student.twoFactorVerified };
-          }
+          if (verificationType === 'identity') return { ...student, identityVerified: !student.identityVerified };
+          else return { ...student, twoFactorVerified: !student.twoFactorVerified };
         }
         return student;
       })
@@ -354,11 +388,8 @@ const App: React.FC = () => {
     setStudents(currentStudents =>
       currentStudents.map(student => {
         if (student.id === studentId) {
-          if (type === 'final') {
-            return { ...student, finalCertificateStatus: !student.finalCertificateStatus };
-          } else { // type === 'dtv'
-            return { ...student, dtvStatus: !student.dtvStatus };
-          }
+          if (type === 'final') return { ...student, finalCertificateStatus: !student.finalCertificateStatus };
+          else return { ...student, dtvStatus: !student.dtvStatus };
         }
         return student;
       })
@@ -368,7 +399,7 @@ const App: React.FC = () => {
   const handleAskCommunityQuestion = useCallback((questionText: string) => {
     const newQuestion: CommunityQuestion = {
       id: Date.now(),
-      author: studentNames[Math.floor(Math.random() * studentNames.length)] || 'Anónimo', // Placeholder author
+      author: studentNames[Math.floor(Math.random() * studentNames.length)] || 'Anónimo',
       text: questionText,
       timestamp: new Date(),
       answers: [],
@@ -379,17 +410,11 @@ const App: React.FC = () => {
   const handleAddCommunityAnswer = useCallback((questionId: number, answerText: string) => {
     const newAnswer: Answer = {
       id: Date.now(),
-      author: studentNames[Math.floor(Math.random() * studentNames.length)] || 'Anónimo', // Placeholder author
+      author: studentNames[Math.floor(Math.random() * studentNames.length)] || 'Anónimo',
       text: answerText,
       timestamp: new Date(),
     };
-    setCommunityQuestions(prev =>
-      prev.map(q =>
-        q.id === questionId
-          ? { ...q, answers: [...q.answers, newAnswer] }
-          : q
-      )
-    );
+    setCommunityQuestions(prev => prev.map(q => q.id === questionId ? { ...q, answers: [...q.answers, newAnswer] } : q));
   }, [studentNames]);
 
   const handleAddBreak = () => {
@@ -400,7 +425,7 @@ const App: React.FC = () => {
             setBreaks([...breaks, { id: Date.now(), ...newBreak }]);
             setNewBreak({ start: '', end: '' });
         } else {
-            alert('Las fechas del período de descanso no son válidas. Asegúrese de que la fecha de inicio sea anterior o igual a la fecha de finalización.');
+            alert('Las fechas del período de descanso no son válidas.');
         }
     }
   };
@@ -418,24 +443,20 @@ const App: React.FC = () => {
         const text = e.target?.result as string;
         try {
             const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
-            if (lines.length < 2) throw new Error("El archivo CSV está vacío o no tiene datos.");
+            if (lines.length < 2) throw new Error("Archivo CSV vacío o sin datos.");
 
             const header = lines[0].split(',').map(h => h.trim().toLowerCase());
             const nameIndex = header.indexOf('nombre');
 
-            if (nameIndex === -1) {
-                throw new Error('El archivo CSV debe contener una columna con el encabezado "Nombre".');
-            }
+            if (nameIndex === -1) throw new Error('El archivo CSV debe contener una columna "Nombre".');
 
-            const names = lines.slice(1)
-                .map(line => line.split(',')[nameIndex]?.trim())
-                .filter(Boolean);
+            const names = lines.slice(1).map(line => line.split(',')[nameIndex]?.trim()).filter(Boolean);
 
             if (names.length > 0) {
                 initializeStudents(names);
-                alert(`${names.length} estudiantes importados correctamente. La aplicación se ha reiniciado con la nueva lista.`);
+                alert(`${names.length} estudiantes importados.`);
             } else {
-                throw new Error('No se encontraron nombres válidos en el archivo CSV.');
+                throw new Error('No se encontraron nombres válidos.');
             }
         } catch (error: any) {
             alert(`Error al procesar el archivo: ${error.message}`);
@@ -446,74 +467,48 @@ const App: React.FC = () => {
     reader.readAsText(file);
   };
   
-   const handleSaveDriveUrl = useCallback(() => {
-    localStorage.setItem('driveFolderUrl', tempDriveFolderUrl);
-    setDriveFolderUrl(tempDriveFolderUrl);
-    alert('URL de la carpeta de Drive guardada correctamente.');
-  }, [tempDriveFolderUrl]);
-  
   const syncData = useCallback(async () => {
       if (syncStatus.status === 'syncing') return;
       setSyncStatus({ status: 'syncing', time: null, message: 'Sincronizando...' });
       
       try {
         const payload = JSON.stringify(processedStudents);
-
-        // Sending data as 'application/x-www-form-urlencoded' is a more robust method
-        // for Google Apps Script, as it avoids CORS preflight issues and is easily parsed
-        // on the backend using e.parameter.payload.
         const response = await fetch(GOOGLE_SCRIPT_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', },
             body: new URLSearchParams({ 'payload': payload }),
             redirect: 'follow',
         });
         
         if (response.ok) {
-           setSyncStatus({ status: 'success', time: new Date(), message: 'Datos sincronizados con éxito.' });
+           const result = await response.json();
+           if (result.status === 'success') {
+                setSyncStatus({ status: 'success', time: new Date(), message: result.message || 'Datos sincronizados con éxito.' });
+           } else {
+               throw new Error(result.message || 'Error desconocido del script.');
+           }
         } else {
             const errorText = await response.text();
             throw new Error(errorText || `Error del servidor: ${response.status}`);
         }
-
       } catch (error: any) {
          console.error("Sync failed:", error);
-         const errorMessage = `Error de sincronización: ${error.message}. Revisa la conexión o la configuración del script de Google.`;
+         const errorMessage = `Error de sincronización: ${error.message}.`;
          setSyncStatus({ status: 'error', time: new Date(), message: errorMessage });
       }
   }, [processedStudents, syncStatus.status]);
 
   const handleExportToCSV = useCallback(() => {
     if (processedStudents.length === 0) {
-      alert("No hay datos de estudiantes para exportar.");
+      alert("No hay datos para exportar.");
       return;
     }
 
     const courseHeaders = Array.from({ length: TOTAL_COURSES }, (_, i) => `C${i + 1}`);
     const certHeaders = Array.from({ length: TOTAL_COURSES }, (_, i) => `Cert. C${i + 1}`);
 
-    const headers = [
-      "Nombre", "Estado", "Puntos Totales", "Puntos Esperados",
-      ...courseHeaders,
-      "Verif. Identidad", "Verif. Dos Pasos",
-      ...certHeaders,
-      "Cert. Final", "Certificado DTV"
-    ];
-
-    const rows = processedStudents.map(s => [
-      `"${s.name.replace(/"/g, '""')}"`, // Handle names with quotes
-      s.status,
-      s.totalPoints,
-      s.expectedPoints.toFixed(2),
-      ...s.courseProgress,
-      s.identityVerified,
-      s.twoFactorVerified,
-      ...s.certificateStatus,
-      s.finalCertificateStatus,
-      s.dtvStatus
-    ].join(','));
+    const headers = [ "Nombre", "Estado", "Puntos Totales", "Puntos Esperados", ...courseHeaders, "Verif. Identidad", "Verif. Dos Pasos", ...certHeaders, "Cert. Final", "Certificado DTV" ];
+    const rows = processedStudents.map(s => [ `"${s.name.replace(/"/g, '""')}"`, s.status, s.totalPoints, s.expectedPoints.toFixed(2), ...s.courseProgress, s.identityVerified, s.twoFactorVerified, ...s.certificateStatus, s.finalCertificateStatus, s.dtvStatus ].join(','));
 
     const csvContent = [headers.join(','), ...rows].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -521,29 +516,10 @@ const App: React.FC = () => {
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
     link.setAttribute("download", `export_estudiantes_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   }, [processedStudents]);
-
-  // Effect for auto-syncing with debounce
-  useEffect(() => {
-    if (!autoSync || isInitialLoad.current) return;
-
-    const handler = setTimeout(() => {
-        syncData();
-    }, 2500); // 2.5-second debounce
-
-    return () => {
-        clearTimeout(handler);
-    };
-  }, [students, autoSync, syncData]);
-
-  const formatSyncTime = (date: Date | null) => {
-      if (!date) return 'nunca';
-      return date.toLocaleTimeString('es-ES');
-  }
 
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8 pb-24">
@@ -557,206 +533,104 @@ const App: React.FC = () => {
           </p>
         </header>
         
-        {activeView === 'monitor' && (
-          <div>
-            <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-                <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
-                    <h3 className="text-sm font-medium text-slate-400">Puntaje Esperado a la Fecha</h3>
-                    <p className="text-3xl font-bold text-white mt-1">{expectedPointsToday.toFixed(2)}</p>
-                </div>
-                <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700 flex flex-col justify-center">
-                    <h3 className="text-sm font-medium text-slate-400 mb-2">Enfoque del Día</h3>
-                    <p className="text-lg font-semibold text-white leading-tight truncate" title={currentCourseAndModule.course}>
-                        {currentCourseAndModule.course}
-                    </p>
-                    <p className="text-md text-sky-400 mt-1 truncate" title={currentCourseAndModule.module}>
-                        {currentCourseAndModule.module}
-                    </p>
-                </div>
-            </section>
-            
-            <section className="mb-8">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-4">
-                {orderedStatuses.map(status => {
-                  const count = statusCounts[status];
-                  const config = STATUS_CONFIG[status];
-                  if (!config) return null;
-
-                  return (
-                    <div key={status} className={`p-4 rounded-lg border border-slate-700 ${config.color}`}>
-                      <div className="flex justify-between items-start">
-                        <h4 className={`text-sm font-medium ${config.textColor}`}>{status}</h4>
-                        <span className={`w-5 h-5 ${config.textColor}`}>{config.icon}</span>
-                      </div>
-                      <p className="text-3xl font-bold text-white mt-2">{count}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-
-            <AIAnalyzer students={processedStudents} expectedPointsToday={expectedPointsToday} />
-            
-            <div className="mb-6">
-                <p className="text-sm text-slate-400 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
-                    Haz clic en la celda de un curso (C1, C2, etc.) para editar el puntaje de una estudiante.
-                </p>
-            </div>
-            
-            <LeaderboardTable students={processedStudents} onUpdateProgress={handleUpdateStudentProgress} />
-          </div>
-        )}
-
-        {activeView === 'verification' && <VerificationView students={processedStudents} onUpdateVerification={handleUpdateVerificationStatus} />}
-        {activeView === 'certificates' && <CertificatesView students={processedStudents} onUpdateCertificateStatus={handleUpdateCertificateStatus} onUpdateOtherStatus={handleUpdateOtherCertificateStatus} />}
-        {activeView === 'tools' && <ToolsView />}
-        {activeView === 'help' && <HelpView questions={communityQuestions} onAskQuestion={handleAskCommunityQuestion} onAddAnswer={handleAddCommunityAnswer} driveFolderUrl={driveFolderUrl} />}
-
-        {activeView === 'config' && (
-          <section className="space-y-8">
-            <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
-                <h2 className="text-xl font-bold text-white">Configuración General</h2>
-                <p className="text-slate-400 mt-1 mb-6">Ajusta los parámetros de cálculo y gestión del monitor.</p>
-                
-                <div className="space-y-6">
-                    <div>
-                        <label htmlFor="startDate" className="block text-sm font-medium text-slate-300">Fecha de Inicio del Bootcamp</label>
-                        <input
-                            type="date"
-                            id="startDate"
-                            value={startDate}
-                            onChange={e => setStartDate(e.target.value)}
-                            className="mt-1 block w-full sm:w-auto bg-slate-700 border-slate-600 rounded-md p-2 text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="totalWorkingDays" className="block text-sm font-medium text-slate-300">Total de Días Laborables</label>
-                        <input
-                            type="number"
-                            id="totalWorkingDays"
-                            value={totalWorkingDays}
-                            onChange={e => setTotalWorkingDays(parseInt(e.target.value, 10))}
-                            className="mt-1 block w-full sm:w-auto bg-slate-700 border-slate-600 rounded-md p-2 text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
-                        />
-                         <p className="text-xs text-slate-500 mt-1">Este valor se usa para calcular los puntos esperados por día.</p>
-                    </div>
-                    
-                    <div>
-                        <h3 className="text-sm font-medium text-slate-300">Períodos de Descanso (no se cuentan en el progreso)</h3>
-                        <div className="mt-2 space-y-2">
-                            {breaks.map(b => (
-                                <div key={b.id} className="flex items-center gap-2 bg-slate-800 p-2 rounded-md">
-                                    <span className="text-sm text-slate-400">
-                                        Del <span className="font-semibold text-white">{formatDate(b.start)}</span> al <span className="font-semibold text-white">{formatDate(b.end)}</span>
-                                    </span>
-                                    <button onClick={() => handleRemoveBreak(b.id)} className="ml-auto text-red-500 hover:text-red-400 p-1 rounded-full bg-red-500/10 hover:bg-red-500/20">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="mt-4 flex flex-col sm:flex-row items-end gap-2">
-                             <div className="w-full">
-                                <label className="block text-xs font-medium text-slate-400">Inicio</label>
-                                <input type="date" value={newBreak.start} onChange={e => setNewBreak({ ...newBreak, start: e.target.value })} className="w-full bg-slate-700 border-slate-600 rounded-md p-2 text-white focus:ring-2 focus:ring-sky-500 focus:outline-none" />
-                             </div>
-                             <div className="w-full">
-                                <label className="block text-xs font-medium text-slate-400">Fin</label>
-                                <input type="date" value={newBreak.end} onChange={e => setNewBreak({ ...newBreak, end: e.target.value })} className="w-full bg-slate-700 border-slate-600 rounded-md p-2 text-white focus:ring-2 focus:ring-sky-500 focus:outline-none" />
-                            </div>
-                            <button onClick={handleAddBreak} className="w-full sm:w-auto flex-shrink-0 px-4 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors">Añadir</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
-              <h2 className="text-xl font-bold text-white mb-1">Gestión de Estudiantes</h2>
-              <p className="text-slate-400 mt-1 mb-6">Importa la lista de estudiantes desde un archivo CSV.</p>
-              
-              <div className="bg-slate-900/50 p-4 rounded-lg border border-dashed border-slate-600 text-center">
-                 <p className="text-sm text-slate-400 mb-2">
-                    El archivo debe ser formato CSV y tener una columna llamada <code className="bg-slate-700 px-1 py-0.5 rounded-md font-mono text-amber-400">Nombre</code>.
-                 </p>
-                 <label htmlFor="csv-upload" className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-slate-600 text-white font-semibold rounded-lg hover:bg-slate-500 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    Importar CSV
-                 </label>
-                 <input id="csv-upload" type="file" className="hidden" accept=".csv" onChange={handleFileUpload} />
-              </div>
-            </div>
-
-             <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
-              <h2 className="text-xl font-bold text-white mb-1">Sincronización con Google Sheets</h2>
-              <div className="mt-4 bg-slate-900/50 p-4 rounded-lg border border-slate-700">
-                  <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                      <div>
-                          <p className="font-semibold text-white">Sincronización Automática</p>
-                          <p className="text-sm text-slate-400">
-                              La sincronización está activada. Los cambios se guardan automáticamente.
-                          </p>
-                      </div>
-                      <div className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-full ${
-                          syncStatus.status === 'success' ? 'bg-green-500/20 text-green-400' : 
-                          syncStatus.status === 'error' ? 'bg-red-500/20 text-red-400' :
-                          'bg-sky-500/20 text-sky-400'
-                      }`}>
-                          {syncStatus.status === 'syncing' && <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
-                          <span>Última sinc: {formatSyncTime(syncStatus.time)}</span>
-                      </div>
+        <main>
+          {activeView === 'monitor' && (
+            <div>
+              <SyncHeader syncStatus={syncStatus} onSync={syncData} />
+              <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+                  <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
+                      <h3 className="text-sm font-medium text-slate-400">Puntaje Esperado a la Fecha</h3>
+                      <p className="text-3xl font-bold text-white mt-1">{expectedPointsToday.toFixed(2)}</p>
                   </div>
-                  {syncStatus.status === 'error' && syncStatus.message && (
-                      <p className="text-xs text-red-400 mt-3">{syncStatus.message}</p>
-                  )}
-              </div>
-            </div>
-
-            <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
-                <h2 className="text-xl font-bold text-white mb-1">Exportar e Importar Datos</h2>
-                <p className="text-slate-400 mt-1 mb-6">Guarda una copia de seguridad o reinicia el monitor con nuevos datos.</p>
-                 <div className="flex flex-col sm:flex-row gap-4">
-                    <button 
-                        onClick={handleExportToCSV}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600/80 text-white font-semibold rounded-lg hover:bg-green-600 transition-colors"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        Exportar a CSV
-                    </button>
-                     <button
-                        onClick={() => {
-                            if (window.confirm('¿Estás seguro de que quieres reiniciar la aplicación? Se perderán todos los datos no guardados y se cargará la lista de estudiantes original.')) {
-                                initializeStudents(MOCK_NAMES);
-                                initializeCommunityQuestions();
-                                alert('La aplicación ha sido reiniciada.');
-                            }
-                        }}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600/80 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors"
-                    >
-                       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                       Reiniciar Aplicación
-                    </button>
-                 </div>
-            </div>
-
-            <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
-                <h2 className="text-xl font-bold text-white mb-1">Carpeta de Certificados en Drive</h2>
-                <p className="text-slate-400 mt-1 mb-4">Introduce la URL de la carpeta de Google Drive donde se almacenan los certificados para que las estudiantes puedan acceder a ella desde la pestaña de Ayuda.</p>
-                <div className="flex flex-col sm:flex-row gap-2">
-                     <input 
-                        type="url"
-                        value={tempDriveFolderUrl}
-                        onChange={e => setTempDriveFolderUrl(e.target.value)}
-                        placeholder="https://drive.google.com/drive/folders/..."
-                        className="w-full bg-slate-700 border-slate-600 rounded-md p-2 text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
-                     />
-                     <button onClick={handleSaveDriveUrl} className="flex-shrink-0 px-4 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors">Guardar URL</button>
+                  <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700 flex flex-col justify-center">
+                      <h3 className="text-sm font-medium text-slate-400 mb-2">Enfoque del Día</h3>
+                      <p className="text-lg font-semibold text-white leading-tight truncate" title={currentCourseAndModule.course}>
+                          {currentCourseAndModule.course}
+                      </p>
+                      <p className="text-md text-sky-400 mt-1 truncate" title={currentCourseAndModule.module}>
+                          {currentCourseAndModule.module}
+                      </p>
+                  </div>
+              </section>
+              
+              <section className="mb-8">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-4">
+                  {orderedStatuses.map(status => {
+                    const count = statusCounts[status];
+                    const config = STATUS_CONFIG[status];
+                    if (!config) return null;
+                    return (
+                      <div key={status} className={`p-4 rounded-lg border border-slate-700 ${config.color}`}>
+                        <div className="flex justify-between items-start">
+                          <h4 className={`text-sm font-medium ${config.textColor}`}>{status}</h4>
+                          <span className={`w-5 h-5 ${config.textColor}`}>{config.icon}</span>
+                        </div>
+                        <p className="text-3xl font-bold text-white mt-2">{count}</p>
+                      </div>
+                    );
+                  })}
                 </div>
+              </section>
+
+              <AIAnalyzer students={processedStudents} expectedPointsToday={expectedPointsToday} />
+              
+              <div className="mb-6">
+                  <p className="text-sm text-slate-400 flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                      Haz clic en la celda de un curso (C1, C2...) para editar el puntaje.
+                  </p>
+              </div>
+
+              <LeaderboardTable students={processedStudents} onUpdateProgress={handleUpdateStudentProgress} />
             </div>
-          </section>
-        )}
-        <BottomNav activeView={activeView} setActiveView={setActiveView} />
+          )}
+
+          {activeView === 'verification' && (
+            <>
+              <SyncHeader syncStatus={syncStatus} onSync={syncData} />
+              <VerificationView students={processedStudents} onUpdateVerification={handleUpdateVerificationStatus} />
+            </>
+          )}
+
+          {activeView === 'certificates' && (
+            <>
+              <SyncHeader syncStatus={syncStatus} onSync={syncData} />
+              <CertificatesView students={processedStudents} onUpdateCertificateStatus={handleUpdateCertificateStatus} onUpdateOtherStatus={handleUpdateOtherCertificateStatus} />
+            </>
+          )}
+
+          {activeView === 'tools' && <ToolsView />}
+
+          {activeView === 'help' && (
+            <HelpView 
+              questions={communityQuestions} 
+              onAskQuestion={handleAskCommunityQuestion}
+              onAddAnswer={handleAddCommunityAnswer}
+              driveFolderUrl={driveFolderUrl} 
+            />
+          )}
+
+          {activeView === 'config' && (
+            <ConfigView 
+              startDate={startDate}
+              setStartDate={setStartDate}
+              totalWorkingDays={totalWorkingDays}
+              setTotalWorkingDays={setTotalWorkingDays}
+              breaks={breaks}
+              newBreak={newBreak}
+              setNewBreak={setNewBreak}
+              handleAddBreak={handleAddBreak}
+              handleRemoveBreak={handleRemoveBreak}
+              handleFileUpload={handleFileUpload}
+              handleExportToCSV={handleExportToCSV}
+              initializeStudents={() => initializeStudents()}
+              syncStatus={syncStatus}
+            />
+          )}
+
+        </main>
       </div>
+      <BottomNav activeView={activeView} setActiveView={setActiveView} />
     </div>
   );
 };

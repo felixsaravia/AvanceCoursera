@@ -71,6 +71,18 @@ export const STATUS_CONFIG: { [key in Status]: { icon: React.ReactNode; color: s
     }
 };
 
+export const orderedStatuses: Status[] = [
+    Status.Finalizada,
+    Status.EliteII,
+    Status.EliteI,
+    Status.Avanzada,
+    Status.AlDia,
+    Status.Atrasada,
+    Status.Riesgo,
+    Status.SinIniciar
+];
+
+
 export const schedule: ScheduleItem[] = [
     { date: '2025-07-21', course: '1. Fundamentos del soporte técnico', module: 'Introducción a la informática' },
     { date: '2025-07-22', course: '1. Fundamentos del soporte técnico', module: 'Hardware' },
