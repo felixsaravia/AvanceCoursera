@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Student, Status, CommunityQuestion, Answer } from './types';
 import { MOCK_NAMES, TOTAL_COURSES, MAX_POINTS_PER_COURSE, TOTAL_MAX_POINTS, STATUS_CONFIG, schedule } from './constants';
@@ -26,6 +27,25 @@ const parseDateAsUTC = (dateString: string): Date => {
   // Month is 0-indexed in Date.UTC (e.g., January is 0)
   return new Date(Date.UTC(year, month - 1, day));
 };
+
+/**
+ * Gets the current date normalized to UTC midnight, but adjusted for the
+ * El Salvador timezone (GTM-6).
+ * @returns A Date object representing today's date in El Salvador at UTC midnight.
+ */
+const getTodayInElSalvador = (): Date => {
+  const now = new Date();
+  // El Salvador is UTC-6. Get current UTC time and subtract 6 hours.
+  const elSalvadorTime = new Date(now.getTime() - (6 * 60 * 60 * 1000));
+  // Return a new Date object representing midnight UTC for that El Salvador date.
+  // This standardizes the time part to avoid time-of-day issues in comparisons.
+  return new Date(Date.UTC(
+    elSalvadorTime.getUTCFullYear(),
+    elSalvadorTime.getUTCMonth(),
+    elSalvadorTime.getUTCDate()
+  ));
+};
+
 
 interface Break {
     id: number;
@@ -170,8 +190,7 @@ const App: React.FC = () => {
   }
 
   const currentCourseAndModule = useMemo(() => {
-    const now = new Date();
-    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const today = getTodayInElSalvador();
 
     if (!schedule || schedule.length === 0) {
         return { course: 'Plan no definido', module: 'No hay tema para hoy' };
@@ -236,8 +255,7 @@ const App: React.FC = () => {
     
     const pointsPerDay = TOTAL_MAX_POINTS / totalWorkingDays;
     
-    const now = new Date();
-    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const today = getTodayInElSalvador();
     let elapsedWorkingDays = 0;
 
     if (today.getTime() >= start.getTime()) {

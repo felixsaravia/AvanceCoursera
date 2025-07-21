@@ -56,19 +56,19 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeView, setActiveView }) => {
         />
         <NavButton
           Icon={VerificationIcon}
-          label="Verificación"
+          label="Verificar"
           isActive={activeView === 'verification'}
           onClick={() => setActiveView('verification')}
         />
         <NavButton
           Icon={CertificateIcon}
-          label="Certificados"
+          label="Certs"
           isActive={activeView === 'certificates'}
           onClick={() => setActiveView('certificates')}
         />
         <NavButton
           Icon={ToolsIcon}
-          label="Herramientas"
+          label="Tools"
           isActive={activeView === 'tools'}
           onClick={() => setActiveView('tools')}
         />

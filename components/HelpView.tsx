@@ -9,7 +9,10 @@ interface HelpViewProps {
 }
 
 const formatRelativeTime = (date: Date) => {
-    const now = new Date();
+    // Get the current time in UTC and adjust it for El Salvador (UTC-6)
+    const nowInUTC = new Date();
+    const now = new Date(nowInUTC.getTime() - (6 * 60 * 60 * 1000));
+    
     const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
     let interval = seconds / 31536000;
     if (interval > 1) return `hace ${Math.floor(interval)} años`;

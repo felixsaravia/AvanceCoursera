@@ -1,5 +1,5 @@
 {
-  "name": "Monitor de Avance de Certificación",
+  "name": "Copy of Monitor de Avance de Certificación",
   "description": "Una aplicación para registrar y visualizar el avance de las estudiantes en los cursos de certificación de Soporte de TI de Coursera, mostrando una tabla de puntajes, estados de progreso y estadísticas generales.",
   "requestFramePermissions": [
     "camera"

@@ -32,7 +32,7 @@ const CertificatesView: React.FC<CertificatesViewProps> = ({ students, onUpdateC
            <table className="min-w-full">
              <thead className="bg-slate-800">
                <tr>
-                 <th scope="col" className="sticky left-0 bg-slate-800 py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-slate-300 z-10">Nombre</th>
+                 <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-slate-300">Nombre</th>
                  {[...Array(TOTAL_COURSES)].map((_, i) => (
                     <th key={i} scope="col" className="py-3.5 px-3 text-center text-sm font-semibold text-slate-300 whitespace-nowrap">Cert. C{i + 1}</th>
                  ))}
@@ -43,7 +43,7 @@ const CertificatesView: React.FC<CertificatesViewProps> = ({ students, onUpdateC
              <tbody className="divide-y divide-slate-800 bg-slate-900">
                {students.map((student) => (
                  <tr key={student.id} className="hover:bg-slate-800/60 group">
-                   <td className="sticky left-0 bg-slate-900 group-hover:bg-slate-800/60 whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-white z-10">{student.name}</td>
+                   <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-white">{student.name}</td>
                    {student.certificateStatus.map((status, index) => (
                      <td key={index} className="whitespace-nowrap py-4 px-3 text-sm text-center">
                        <VerificationStatusBadge
