@@ -5,9 +5,10 @@ import VerificationStatusBadge from './VerificationStatusBadge';
 interface VerificationViewProps {
   students: Student[];
   onUpdateVerification: (studentId: number, type: 'identity' | 'twoFactor') => void;
+  isReadOnly: boolean;
 }
 
-const VerificationView: React.FC<VerificationViewProps> = ({ students, onUpdateVerification }) => {
+const VerificationView: React.FC<VerificationViewProps> = ({ students, onUpdateVerification, isReadOnly }) => {
   return (
     <section className="space-y-6">
        <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
@@ -30,12 +31,14 @@ const VerificationView: React.FC<VerificationViewProps> = ({ students, onUpdateV
                      <VerificationStatusBadge
                        verified={student.identityVerified}
                        onClick={() => onUpdateVerification(student.id, 'identity')}
+                       disabled={isReadOnly}
                      />
                    </td>
                    <td className="whitespace-nowrap py-4 px-3 text-sm text-center">
                      <VerificationStatusBadge
                        verified={student.twoFactorVerified}
                        onClick={() => onUpdateVerification(student.id, 'twoFactor')}
+                       disabled={isReadOnly}
                      />
                    </td>
                  </tr>

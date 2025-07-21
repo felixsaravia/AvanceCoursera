@@ -7,9 +7,10 @@ interface CertificatesViewProps {
   students: Student[];
   onUpdateCertificateStatus: (studentId: number, courseIndex: number) => void;
   onUpdateOtherStatus: (studentId: number, type: 'final' | 'dtv') => void;
+  isReadOnly: boolean;
 }
 
-const CertificatesView: React.FC<CertificatesViewProps> = ({ students, onUpdateCertificateStatus, onUpdateOtherStatus }) => {
+const CertificatesView: React.FC<CertificatesViewProps> = ({ students, onUpdateCertificateStatus, onUpdateOtherStatus, isReadOnly }) => {
   return (
     <section className="space-y-6">
        <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
@@ -50,6 +51,7 @@ const CertificatesView: React.FC<CertificatesViewProps> = ({ students, onUpdateC
                          verified={status}
                          onClick={() => onUpdateCertificateStatus(student.id, index)}
                          verifiedText="Entregado"
+                         disabled={isReadOnly}
                        />
                      </td>
                    ))}
@@ -58,6 +60,7 @@ const CertificatesView: React.FC<CertificatesViewProps> = ({ students, onUpdateC
                          verified={student.finalCertificateStatus}
                          onClick={() => onUpdateOtherStatus(student.id, 'final')}
                          verifiedText="Entregado"
+                         disabled={isReadOnly}
                        />
                    </td>
                    <td className="whitespace-nowrap py-4 px-3 text-sm text-center">
@@ -65,6 +68,7 @@ const CertificatesView: React.FC<CertificatesViewProps> = ({ students, onUpdateC
                          verified={student.dtvStatus}
                          onClick={() => onUpdateOtherStatus(student.id, 'dtv')}
                          verifiedText="Entregado"
+                         disabled={isReadOnly}
                        />
                    </td>
                  </tr>

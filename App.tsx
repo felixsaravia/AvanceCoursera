@@ -49,13 +49,18 @@ const SaveChangesHeader: React.FC<{
   syncStatus: SyncStatus;
   onSave: () => void;
   hasUnsavedChanges: boolean;
-}> = ({ syncStatus, onSave, hasUnsavedChanges }) => {
+  isReadOnly: boolean;
+}> = ({ syncStatus, onSave, hasUnsavedChanges, isReadOnly }) => {
     const isSyncing = syncStatus.status === 'syncing';
     let statusText: string;
     let statusColor: string;
     let icon: React.ReactNode;
 
-    if (isSyncing) {
+    if (isReadOnly && syncStatus.status !== 'syncing') {
+        statusText = 'Modo de solo lectura';
+        statusColor = 'text-slate-400';
+        icon = <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.73 18l-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>;
+    } else if (isSyncing) {
         statusText = 'Guardando...';
         statusColor = 'text-sky-400';
         icon = <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
@@ -87,7 +92,7 @@ const SaveChangesHeader: React.FC<{
           </div>
           <button
             onClick={onSave}
-            disabled={isSyncing || !hasUnsavedChanges}
+            disabled={isSyncing || !hasUnsavedChanges || isReadOnly}
             className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed disabled:text-slate-400"
           >
             {isSyncing ? 'Guardando...' : (
@@ -174,7 +179,7 @@ const ConfigView: React.FC<{
 
 
 const App: React.FC = () => {
-  const [studentNames, setStudentNames] = useState<string[]>(MOCK_NAMES);
+  const [studentNames, setStudentNames] = useState<string[]>([]);
   const [students, setStudents] = useState<Omit<Student, 'totalPoints' | 'expectedPoints' | 'status'>[]>([]);
   const [startDate, setStartDate] = useState<string>('2025-07-21');
   const [totalWorkingDays, setTotalWorkingDays] = useState<number>(62);
@@ -189,6 +194,8 @@ const App: React.FC = () => {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({ time: null, status: 'idle' });
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const isInitialLoad = useRef(true);
+  const [isReadOnly, setIsReadOnly] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
 
   const initializeStudents = useCallback((names: string[] = MOCK_NAMES) => {
@@ -212,7 +219,10 @@ const App: React.FC = () => {
   }, []);
 
   const fetchInitialData = useCallback(async () => {
-    setSyncStatus({ status: 'syncing', time: null, message: 'Cargando datos iniciales...' });
+    setLoadError(null);
+    setIsReadOnly(true);
+    setSyncStatus({ status: 'syncing', time: null, message: 'Cargando datos...' });
+    
     try {
         const response = await fetch(GOOGLE_SCRIPT_URL, { method: 'GET', redirect: 'follow' });
         if (!response.ok) throw new Error(`Error en la respuesta del servidor: ${response.statusText}`);
@@ -220,34 +230,39 @@ const App: React.FC = () => {
         const data = await response.json();
         if (data.error) throw new Error(data.error);
         
-        if(Array.isArray(data) && data.length > 0) {
-            const fetchedStudents = data.map((s, index) => ({
-              id: index + 1,
-              name: s.name,
-              courseProgress: s.courseProgress || Array(TOTAL_COURSES).fill(0),
-              identityVerified: s.identityVerified || false,
-              twoFactorVerified: s.twoFactorVerified || false,
-              certificateStatus: s.certificateStatus || Array(TOTAL_COURSES).fill(false),
-              finalCertificateStatus: s.finalCertificateStatus || false,
-              dtvStatus: s.dtvStatus || false,
-            }));
-            setStudents(fetchedStudents);
-            setStudentNames(fetchedStudents.map(s => s.name));
+        if(Array.isArray(data)) {
+            if(data.length > 0) {
+                const fetchedStudents = data.map((s, index) => ({
+                  id: s.id || index + 1,
+                  name: s.name,
+                  courseProgress: s.courseProgress || Array(TOTAL_COURSES).fill(0),
+                  identityVerified: s.identityVerified || false,
+                  twoFactorVerified: s.twoFactorVerified || false,
+                  certificateStatus: s.certificateStatus || Array(TOTAL_COURSES).fill(false),
+                  finalCertificateStatus: s.finalCertificateStatus || false,
+                  dtvStatus: s.dtvStatus || false,
+                }));
+                setStudents(fetchedStudents);
+                setStudentNames(fetchedStudents.map(s => s.name));
+            } else {
+                setStudents([]);
+                setStudentNames([]);
+            }
             setSyncStatus({ status: 'success', time: new Date(), message: 'Datos cargados correctamente.' });
+            setIsReadOnly(false);
         } else {
-            initializeStudents(MOCK_NAMES);
-            setSyncStatus({ status: 'idle', time: null, message: 'Se cargó la lista de respaldo. Guarda para crear la hoja.' });
+            throw new Error("Formato de datos inesperado recibido del servidor.");
         }
         setHasUnsavedChanges(false);
         
     } catch (error: any) {
-        console.error("Failed to fetch from Google Sheets, using fallback:", error);
-        let errorMessage = `Error al cargar: ${error.message}. Se usará la lista de respaldo.`;
-        setSyncStatus({ status: 'error', time: new Date(), message: errorMessage });
-        initializeStudents(MOCK_NAMES);
-        setHasUnsavedChanges(false);
+        console.error("Failed to fetch from Google Sheets:", error);
+        setLoadError(`Error al cargar datos: ${error.message}. La aplicación está en modo de solo lectura.`);
+        setStudents([]);
+        setIsReadOnly(true);
+        setSyncStatus({ status: 'error', time: new Date(), message: 'Error de conexión.' });
     }
-  }, [initializeStudents]);
+  }, []);
 
   useEffect(() => {
       const savedDriveUrl = localStorage.getItem('driveFolderUrl') || '';
@@ -508,7 +523,7 @@ const App: React.FC = () => {
   };
   
   const saveData = useCallback(async () => {
-      if (syncStatus.status === 'syncing') return;
+      if (syncStatus.status === 'syncing' || isReadOnly) return;
       setSyncStatus({ status: 'syncing', time: null, message: 'Guardando...' });
       
       try {
@@ -537,7 +552,7 @@ const App: React.FC = () => {
          const errorMessage = `Error al guardar: ${error.message}.`;
          setSyncStatus({ status: 'error', time: new Date(), message: errorMessage });
       }
-  }, [processedStudents, syncStatus.status]);
+  }, [processedStudents, syncStatus.status, isReadOnly]);
 
   const handleExportToCSV = useCallback(() => {
     if (processedStudents.length === 0) {
@@ -575,9 +590,27 @@ const App: React.FC = () => {
         </header>
         
         <main>
+            {loadError && (
+              <div className="bg-red-500/10 p-4 rounded-lg border border-red-500/30 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                  <div className="flex items-center gap-3">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-400 h-6 w-6 flex-shrink-0"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                      <div>
+                          <p className="font-semibold text-white">Error de Conexión</p>
+                          <p className="text-sm text-red-300">{loadError}</p>
+                      </div>
+                  </div>
+                  <button
+                      onClick={fetchInitialData}
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors"
+                  >
+                      Reintentar Conexión
+                  </button>
+              </div>
+          )}
+
           {activeView === 'monitor' && (
             <div>
-              <SaveChangesHeader syncStatus={syncStatus} onSave={saveData} hasUnsavedChanges={hasUnsavedChanges} />
+              <SaveChangesHeader syncStatus={syncStatus} onSave={saveData} hasUnsavedChanges={hasUnsavedChanges} isReadOnly={isReadOnly} />
               <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
                   <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
                       <h3 className="text-sm font-medium text-slate-400">Puntaje Esperado a la Fecha</h3>
@@ -622,21 +655,21 @@ const App: React.FC = () => {
                   </p>
               </div>
 
-              <LeaderboardTable students={processedStudents} onUpdateProgress={handleUpdateStudentProgress} />
+              <LeaderboardTable students={processedStudents} onUpdateProgress={handleUpdateStudentProgress} isReadOnly={isReadOnly} />
             </div>
           )}
 
           {activeView === 'verification' && (
             <>
-              <SaveChangesHeader syncStatus={syncStatus} onSave={saveData} hasUnsavedChanges={hasUnsavedChanges} />
-              <VerificationView students={processedStudents} onUpdateVerification={handleUpdateVerificationStatus} />
+              <SaveChangesHeader syncStatus={syncStatus} onSave={saveData} hasUnsavedChanges={hasUnsavedChanges} isReadOnly={isReadOnly} />
+              <VerificationView students={processedStudents} onUpdateVerification={handleUpdateVerificationStatus} isReadOnly={isReadOnly} />
             </>
           )}
 
           {activeView === 'certificates' && (
             <>
-              <SaveChangesHeader syncStatus={syncStatus} onSave={saveData} hasUnsavedChanges={hasUnsavedChanges} />
-              <CertificatesView students={processedStudents} onUpdateCertificateStatus={handleUpdateCertificateStatus} onUpdateOtherStatus={handleUpdateOtherCertificateStatus} />
+              <SaveChangesHeader syncStatus={syncStatus} onSave={saveData} hasUnsavedChanges={hasUnsavedChanges} isReadOnly={isReadOnly} />
+              <CertificatesView students={processedStudents} onUpdateCertificateStatus={handleUpdateCertificateStatus} onUpdateOtherStatus={handleUpdateOtherCertificateStatus} isReadOnly={isReadOnly} />
             </>
           )}
 

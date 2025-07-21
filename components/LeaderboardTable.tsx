@@ -7,9 +7,10 @@ import { TOTAL_MAX_POINTS, TOTAL_COURSES, MAX_POINTS_PER_COURSE } from '../const
 interface LeaderboardTableProps {
   students: Student[];
   onUpdateProgress: (studentId: number, courseIndex: number, newProgress: number) => void;
+  isReadOnly: boolean;
 }
 
-const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, onUpdateProgress }) => {
+const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, onUpdateProgress, isReadOnly }) => {
   const [editingCell, setEditingCell] = useState<{ studentId: number; courseIndex: number } | null>(null);
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>, studentId: number, courseIndex: number) => {
@@ -62,7 +63,7 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, onUpdateP
                   <td
                     key={i}
                     className="whitespace-nowrap text-center py-2 px-1 text-sm text-slate-300"
-                    onClick={() => !isEditing && setEditingCell({ studentId: student.id, courseIndex: i })}
+                    onClick={() => !isReadOnly && !isEditing && setEditingCell({ studentId: student.id, courseIndex: i })}
                   >
                     {isEditing ? (
                       <input
@@ -76,7 +77,7 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, onUpdateP
                         max="100"
                       />
                     ) : (
-                      <span className="inline-block w-full py-2 cursor-pointer rounded-md hover:bg-slate-800 transition-colors">
+                      <span className={`inline-block w-full py-2 rounded-md transition-colors ${isReadOnly ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-slate-800'}`}>
                         {progress}
                       </span>
                     )}

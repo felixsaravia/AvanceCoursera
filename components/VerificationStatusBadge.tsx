@@ -5,18 +5,26 @@ interface VerificationStatusBadgeProps {
   onClick: () => void;
   verifiedText?: string;
   pendingText?: string;
+  disabled?: boolean;
 }
 
 const VerificationStatusBadge: React.FC<VerificationStatusBadgeProps> = ({ 
   verified, 
   onClick, 
   verifiedText = 'Realizado', 
-  pendingText = 'Pendiente' 
+  pendingText = 'Pendiente',
+  disabled = false
 }) => {
-  const baseClasses = "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-colors w-40 justify-center";
-  const verifiedClasses = "bg-green-500/20 text-green-400 hover:bg-green-500/30";
-  const pendingClasses = "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30";
-
+  const baseClasses = "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors w-40 justify-center";
+  
+  const stateClasses = verified 
+    ? "bg-green-500/20 text-green-400" 
+    : "bg-amber-500/20 text-amber-400";
+    
+  const interactiveClasses = !disabled
+    ? (verified ? "hover:bg-green-500/30" : "hover:bg-amber-500/30")
+    : "opacity-60 cursor-not-allowed";
+  
   const icon = verified ? (
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M20 6 9 17l-5-5" />
@@ -29,7 +37,12 @@ const VerificationStatusBadge: React.FC<VerificationStatusBadgeProps> = ({
   );
 
   return (
-    <button onClick={onClick} className={`${baseClasses} ${verified ? verifiedClasses : pendingClasses}`} aria-label={`Estado: ${verified ? verifiedText : pendingText}. Click para cambiar.`}>
+    <button 
+      onClick={onClick} 
+      disabled={disabled}
+      className={`${baseClasses} ${stateClasses} ${interactiveClasses}`} 
+      aria-label={`Estado: ${verified ? verifiedText : pendingText}. Click para cambiar.`}
+    >
       {icon}
       <span>{verified ? verifiedText : pendingText}</span>
     </button>
