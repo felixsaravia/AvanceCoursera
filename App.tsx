@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Student, Status, CommunityQuestion, Answer, ScheduleItem, Break } from './types';
 import { MOCK_NAMES, TOTAL_COURSES, MAX_POINTS_PER_COURSE, TOTAL_MAX_POINTS, STATUS_CONFIG, schedule, orderedStatuses } from './constants';
@@ -44,37 +45,61 @@ const formatSyncTime = (date: Date | null) => {
     return date.toLocaleTimeString('es-ES');
 };
 
-const SyncHeader: React.FC<{ syncStatus: SyncStatus; onSync: () => void; }> = ({ syncStatus, onSync }) => (
-    <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-      <div>
-        <p className="font-semibold text-white">Sincronización con Google Sheets</p>
-        <p className={`text-sm ${
-          syncStatus.status === 'success' ? 'text-green-400' : 
-          syncStatus.status === 'error' ? 'text-red-400' :
-          'text-slate-400'
-        }`}>
-          {syncStatus.message || `Última sinc: ${formatSyncTime(syncStatus.time)}`}
-        </p>
-      </div>
-      <button
-        onClick={onSync}
-        disabled={syncStatus.status === 'syncing'}
-        className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed"
-      >
-        {syncStatus.status === 'syncing' ? (
-          <>
-            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-            Sincronizando...
-          </>
-        ) : (
-          <>
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            Sincronizar Ahora
-          </>
-        )}
-      </button>
-    </div>
-);
+const SaveChangesHeader: React.FC<{
+  syncStatus: SyncStatus;
+  onSave: () => void;
+  hasUnsavedChanges: boolean;
+}> = ({ syncStatus, onSave, hasUnsavedChanges }) => {
+    const isSyncing = syncStatus.status === 'syncing';
+    let statusText: string;
+    let statusColor: string;
+    let icon: React.ReactNode;
+
+    if (isSyncing) {
+        statusText = 'Guardando...';
+        statusColor = 'text-sky-400';
+        icon = <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
+    } else if (syncStatus.status === 'error') {
+        statusText = syncStatus.message || 'Error al guardar';
+        statusColor = 'text-red-400';
+        icon = <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>;
+    } else if (hasUnsavedChanges) {
+        statusText = 'Cambios sin guardar';
+        statusColor = 'text-amber-400';
+        icon = <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>;
+    } else {
+        statusText = 'Todos los cambios guardados';
+        statusColor = 'text-green-400';
+        icon = <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+    }
+
+    return (
+        <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-3">
+            <span className={statusColor}>{icon}</span>
+            <div>
+              <p className="font-semibold text-white">Guardar en Google Sheets</p>
+              <p className={`text-sm ${statusColor}`}>
+                  {statusText}
+                  {syncStatus.status === 'success' && !hasUnsavedChanges && ` - Última vez: ${formatSyncTime(syncStatus.time)}`}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onSave}
+            disabled={isSyncing || !hasUnsavedChanges}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed disabled:text-slate-400"
+          >
+            {isSyncing ? 'Guardando...' : (
+                <>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                Guardar Cambios
+                </>
+            )}
+          </button>
+        </div>
+    );
+};
 
 const ConfigView: React.FC<{
   startDate: string;
@@ -89,11 +114,10 @@ const ConfigView: React.FC<{
   handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleExportToCSV: () => void;
   initializeStudents: () => void;
-  syncStatus: SyncStatus;
 }> = ({
   startDate, setStartDate, totalWorkingDays, setTotalWorkingDays,
   breaks, newBreak, setNewBreak, handleAddBreak, handleRemoveBreak,
-  handleFileUpload, handleExportToCSV, initializeStudents, syncStatus
+  handleFileUpload, handleExportToCSV, initializeStudents
 }) => (
     <section className="space-y-8">
         <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
@@ -139,7 +163,7 @@ const ConfigView: React.FC<{
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     Exportar CSV
                 </button>
-                 <button onClick={() => { if(window.confirm('¿Seguro que quieres reiniciar la lista de estudiantes a la original? Se perderán todos los cambios no sincronizados.')) initializeStudents(); }} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-500 transition-colors">
+                 <button onClick={() => { if(window.confirm('¿Seguro que quieres reiniciar la lista de estudiantes a la original? Se perderán todos los cambios no guardados.')) initializeStudents(); }} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-500 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                     Reiniciar Lista
                 </button>
@@ -163,6 +187,7 @@ const App: React.FC = () => {
   
   const [driveFolderUrl, setDriveFolderUrl] = useState<string>('');
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({ time: null, status: 'idle' });
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const isInitialLoad = useRef(true);
 
 
@@ -179,6 +204,7 @@ const App: React.FC = () => {
     }));
     setStudents(initialStudents);
     setStudentNames(names);
+    setHasUnsavedChanges(true);
   }, []);
 
   const initializeCommunityQuestions = useCallback(() => {
@@ -210,17 +236,16 @@ const App: React.FC = () => {
             setSyncStatus({ status: 'success', time: new Date(), message: 'Datos cargados correctamente.' });
         } else {
             initializeStudents(MOCK_NAMES);
-            setSyncStatus({ status: 'idle', time: null, message: 'Se cargó la lista de respaldo. Sincroniza para guardar.' });
+            setSyncStatus({ status: 'idle', time: null, message: 'Se cargó la lista de respaldo. Guarda para crear la hoja.' });
         }
+        setHasUnsavedChanges(false);
         
     } catch (error: any) {
         console.error("Failed to fetch from Google Sheets, using fallback:", error);
         let errorMessage = `Error al cargar: ${error.message}. Se usará la lista de respaldo.`;
-        if (typeof error.message === 'string' && error.message.includes('no fue encontrada')) {
-            errorMessage = 'Error de conexión: No se encontró la hoja "Alumnas".';
-        }
         setSyncStatus({ status: 'error', time: new Date(), message: errorMessage });
         initializeStudents(MOCK_NAMES);
+        setHasUnsavedChanges(false);
     }
   }, [initializeStudents]);
 
@@ -248,6 +273,7 @@ const App: React.FC = () => {
         return student;
       })
     );
+    setHasUnsavedChanges(true);
   }, []);
   
   const formatDate = (dateString: string) => {
@@ -369,6 +395,7 @@ const App: React.FC = () => {
         return student;
       })
     );
+    setHasUnsavedChanges(true);
   }, []);
 
   const handleUpdateCertificateStatus = useCallback((studentId: number, courseIndex: number) => {
@@ -382,6 +409,7 @@ const App: React.FC = () => {
         return student;
       })
     );
+    setHasUnsavedChanges(true);
   }, []);
 
   const handleUpdateOtherCertificateStatus = useCallback((studentId: number, type: 'final' | 'dtv') => {
@@ -394,6 +422,7 @@ const App: React.FC = () => {
         return student;
       })
     );
+    setHasUnsavedChanges(true);
   }, []);
 
   const handleAskCommunityQuestion = useCallback((questionText: string) => {
@@ -424,6 +453,7 @@ const App: React.FC = () => {
         if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start.getTime() <= end.getTime()) {
             setBreaks([...breaks, { id: Date.now(), ...newBreak }]);
             setNewBreak({ start: '', end: '' });
+            setHasUnsavedChanges(true);
         } else {
             alert('Las fechas del período de descanso no son válidas.');
         }
@@ -432,7 +462,17 @@ const App: React.FC = () => {
 
   const handleRemoveBreak = (id: number) => {
     setBreaks(breaks.filter(b => b.id !== id));
+    setHasUnsavedChanges(true);
   };
+  
+  const handleSetStartDate = (date: string) => {
+      setStartDate(date);
+      setHasUnsavedChanges(true);
+  }
+  const handleSetTotalWorkingDays = (days: number) => {
+      setTotalWorkingDays(days);
+      setHasUnsavedChanges(true);
+  }
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -467,9 +507,9 @@ const App: React.FC = () => {
     reader.readAsText(file);
   };
   
-  const syncData = useCallback(async () => {
+  const saveData = useCallback(async () => {
       if (syncStatus.status === 'syncing') return;
-      setSyncStatus({ status: 'syncing', time: null, message: 'Sincronizando...' });
+      setSyncStatus({ status: 'syncing', time: null, message: 'Guardando...' });
       
       try {
         const payload = JSON.stringify(processedStudents);
@@ -483,7 +523,8 @@ const App: React.FC = () => {
         if (response.ok) {
            const result = await response.json();
            if (result.status === 'success') {
-                setSyncStatus({ status: 'success', time: new Date(), message: result.message || 'Datos sincronizados con éxito.' });
+                setSyncStatus({ status: 'success', time: new Date(), message: result.message || 'Datos guardados con éxito.' });
+                setHasUnsavedChanges(false);
            } else {
                throw new Error(result.message || 'Error desconocido del script.');
            }
@@ -492,8 +533,8 @@ const App: React.FC = () => {
             throw new Error(errorText || `Error del servidor: ${response.status}`);
         }
       } catch (error: any) {
-         console.error("Sync failed:", error);
-         const errorMessage = `Error de sincronización: ${error.message}.`;
+         console.error("Save failed:", error);
+         const errorMessage = `Error al guardar: ${error.message}.`;
          setSyncStatus({ status: 'error', time: new Date(), message: errorMessage });
       }
   }, [processedStudents, syncStatus.status]);
@@ -536,7 +577,7 @@ const App: React.FC = () => {
         <main>
           {activeView === 'monitor' && (
             <div>
-              <SyncHeader syncStatus={syncStatus} onSync={syncData} />
+              <SaveChangesHeader syncStatus={syncStatus} onSave={saveData} hasUnsavedChanges={hasUnsavedChanges} />
               <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
                   <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
                       <h3 className="text-sm font-medium text-slate-400">Puntaje Esperado a la Fecha</h3>
@@ -587,14 +628,14 @@ const App: React.FC = () => {
 
           {activeView === 'verification' && (
             <>
-              <SyncHeader syncStatus={syncStatus} onSync={syncData} />
+              <SaveChangesHeader syncStatus={syncStatus} onSave={saveData} hasUnsavedChanges={hasUnsavedChanges} />
               <VerificationView students={processedStudents} onUpdateVerification={handleUpdateVerificationStatus} />
             </>
           )}
 
           {activeView === 'certificates' && (
             <>
-              <SyncHeader syncStatus={syncStatus} onSync={syncData} />
+              <SaveChangesHeader syncStatus={syncStatus} onSave={saveData} hasUnsavedChanges={hasUnsavedChanges} />
               <CertificatesView students={processedStudents} onUpdateCertificateStatus={handleUpdateCertificateStatus} onUpdateOtherStatus={handleUpdateOtherCertificateStatus} />
             </>
           )}
@@ -613,9 +654,9 @@ const App: React.FC = () => {
           {activeView === 'config' && (
             <ConfigView 
               startDate={startDate}
-              setStartDate={setStartDate}
+              setStartDate={handleSetStartDate}
               totalWorkingDays={totalWorkingDays}
-              setTotalWorkingDays={setTotalWorkingDays}
+              setTotalWorkingDays={handleSetTotalWorkingDays}
               breaks={breaks}
               newBreak={newBreak}
               setNewBreak={setNewBreak}
@@ -624,7 +665,6 @@ const App: React.FC = () => {
               handleFileUpload={handleFileUpload}
               handleExportToCSV={handleExportToCSV}
               initializeStudents={() => initializeStudents()}
-              syncStatus={syncStatus}
             />
           )}
 
