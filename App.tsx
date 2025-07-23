@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Student, Status, CommunityQuestion, Answer, ScheduleItem, Break } from './types';
 import { MOCK_NAMES, TOTAL_COURSES, MAX_POINTS_PER_COURSE, TOTAL_MAX_POINTS, STATUS_CONFIG, schedule, orderedStatuses, COURSE_NAMES } from './constants';
@@ -96,7 +97,7 @@ const SaveChangesHeader: React.FC<{
             {isSyncing ? 'Guardando...' : (
                 <>
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                <span>Guardar Cambios</span>
+                Guardar Cambios
                 </>
             )}
           </button>
@@ -104,306 +105,606 @@ const SaveChangesHeader: React.FC<{
     );
 };
 
-const AgapeLogo = () => (
-    <div className="flex-shrink-0 w-12 h-12 border border-gray-300 rounded-md flex flex-col items-center justify-center bg-white p-1">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 w-5 h-5">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5"/>
-            <polyline points="21 15 16 10 5 21"/>
-        </svg>
-        <span className="text-xs font-semibold text-gray-700 leading-none">AGAP</span>
-    </div>
+const ConfigView: React.FC<{
+  startDate: string;
+  setStartDate: (date: string) => void;
+  totalWorkingDays: number;
+  setTotalWorkingDays: (days: number) => void;
+  breaks: Break[];
+  newBreak: { start: string, end: string };
+  setNewBreak: (b: { start: string, end: string }) => void;
+  handleAddBreak: () => void;
+  handleRemoveBreak: (id: number) => void;
+  handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleExportToCSV: () => void;
+  initializeStudents: () => void;
+}> = ({
+  startDate, setStartDate, totalWorkingDays, setTotalWorkingDays,
+  breaks, newBreak, setNewBreak, handleAddBreak, handleRemoveBreak,
+  handleFileUpload, handleExportToCSV, initializeStudents
+}) => (
+    <section className="space-y-8">
+        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Parámetros del Curso</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label htmlFor="start-date" className="block text-sm font-medium text-gray-600 mb-2">Fecha de Inicio del Curso</label>
+                    <input type="date" id="start-date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-gray-50 border-gray-300 rounded-md p-2 text-gray-900 focus:ring-2 focus:ring-sky-500" />
+                </div>
+                <div>
+                    <label htmlFor="total-days" className="block text-sm font-medium text-gray-600 mb-2">Total de Días Laborales</label>
+                    <input type="number" id="total-days" value={totalWorkingDays} onChange={e => setTotalWorkingDays(parseInt(e.target.value, 10))} className="w-full bg-gray-50 border-gray-300 rounded-md p-2 text-gray-900 focus:ring-2 focus:ring-sky-500" />
+                </div>
+            </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Períodos de Descanso</h2>
+            <div className="space-y-4 mb-6">
+                {breaks.map(b => (
+                    <div key={b.id} className="flex items-center justify-between bg-gray-100 p-3 rounded-md">
+                        <p className="text-gray-700">Del <span className="font-semibold text-sky-600">{b.start}</span> al <span className="font-semibold text-sky-600">{b.end}</span></p>
+                        <button onClick={() => handleRemoveBreak(b.id)} className="text-red-500 hover:text-red-400">&times;</button>
+                    </div>
+                ))}
+            </div>
+            <div className="flex flex-col md:flex-row items-center gap-4">
+                <input type="date" value={newBreak.start} onChange={e => setNewBreak({ ...newBreak, start: e.target.value })} className="flex-1 w-full md:w-auto bg-gray-50 border-gray-300 rounded-md p-2 text-gray-900" />
+                <input type="date" value={newBreak.end} onChange={e => setNewBreak({ ...newBreak, end: e.target.value })} className="flex-1 w-full md:w-auto bg-gray-50 border-gray-300 rounded-md p-2 text-gray-900" />
+                <button onClick={handleAddBreak} className="w-full md:w-auto px-4 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500">Añadir</button>
+            </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Gestión de Estudiantes</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <label className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Importar CSV
+                    <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" />
+                </label>
+                <button onClick={handleExportToCSV} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Exportar CSV
+                </button>
+                 <button onClick={() => { if(window.confirm('¿Seguro que quieres reiniciar la lista de estudiantes a la original? Se perderán todos los cambios no guardados.')) initializeStudents(); }} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-500 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    Reiniciar Lista
+                </button>
+            </div>
+        </div>
+    </section>
 );
 
 
 const App: React.FC = () => {
-    const [students, setStudents] = useState<Student[]>([]);
-    const [initialStudents, setInitialStudents] = useState<Student[]>([]);
-    const [activeView, setActiveView] = useState<ActiveView>('monitor');
-    const [syncStatus, setSyncStatus] = useState<SyncStatus>({ status: 'idle', time: null });
-    const [isReadOnly, setIsReadOnly] = useState(true);
-    const [password, setPassword] = useState('');
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [questions, setQuestions] = useState<CommunityQuestion[]>([]);
-    
-    const hasUnsavedChanges = useMemo(() => {
-        return JSON.stringify(students) !== JSON.stringify(initialStudents);
-    }, [students, initialStudents]);
-    
-    const today = useMemo(() => getTodayInElSalvador(), []);
+  const [studentNames, setStudentNames] = useState<string[]>([]);
+  const [students, setStudents] = useState<Omit<Student, 'totalPoints' | 'expectedPoints' | 'status'>[]>([]);
+  const [startDate, setStartDate] = useState<string>('2025-07-21');
+  const [totalWorkingDays, setTotalWorkingDays] = useState<number>(62);
+  const [breaks, setBreaks] = useState<Break[]>([
+      { id: 1, start: '2025-04-13', end: '2025-04-20' }
+  ]);
+  const [newBreak, setNewBreak] = useState({ start: '', end: '' });
+  const [activeView, setActiveView] = useState<ActiveView>('monitor');
+  const [communityQuestions, setCommunityQuestions] = useState<CommunityQuestion[]>([]);
+  
+  const [driveFolderUrl, setDriveFolderUrl] = useState<string>('');
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>({ time: null, status: 'idle' });
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const isInitialLoad = useRef(true);
+  const [isReadOnly, setIsReadOnly] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-    const scheduleUpToToday = useMemo(() => {
-        const todayUTC = today.getTime();
-        return schedule.filter(item => {
-            const itemDate = parseDateAsUTC(item.date);
-            return !isNaN(itemDate.getTime()) && itemDate.getTime() <= todayUTC;
-        });
-    }, [today]);
 
-    const expectedPointsToday = useMemo(() => {
-        const uniqueDays = new Set(scheduleUpToToday.map(item => item.date));
-        const totalScheduledDays = new Set(schedule.map(item => item.date)).size;
+  const initializeStudents = useCallback((names: string[] = MOCK_NAMES) => {
+    const initialStudents = names.map((name, index) => ({
+      id: index + 1,
+      name,
+      courseProgress: Array(TOTAL_COURSES).fill(0),
+      identityVerified: false,
+      twoFactorVerified: false,
+      certificateStatus: Array(TOTAL_COURSES).fill(false),
+      finalCertificateStatus: false,
+      dtvStatus: false,
+    }));
+    setStudents(initialStudents);
+    setStudentNames(names);
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const initializeCommunityQuestions = useCallback(() => {
+      setCommunityQuestions([]);
+  }, []);
+
+  const fetchInitialData = useCallback(async () => {
+    setLoadError(null);
+    setIsReadOnly(true);
+    setSyncStatus({ status: 'syncing', time: null, message: 'Cargando datos...' });
+    
+    try {
+        const response = await fetch(GOOGLE_SCRIPT_URL, { method: 'GET', redirect: 'follow' });
+        if (!response.ok) throw new Error(`Error en la respuesta del servidor: ${response.statusText}`);
         
-        if (totalScheduledDays === 0) return 0;
-
-        const pointsPerDay = TOTAL_MAX_POINTS / totalScheduledDays;
-        return uniqueDays.size * pointsPerDay;
-    }, [scheduleUpToToday]);
-    
-    const currentCourseName = useMemo(() => {
-      const lastScheduledItem = scheduleUpToToday.length > 0 ? scheduleUpToToday[scheduleUpToToday.length - 1] : null;
-      return lastScheduledItem ? lastScheduledItem.course : COURSE_NAMES[0];
-    }, [scheduleUpToToday]);
-
-
-    const calculateStatus = useCallback((totalPoints: number, expectedPoints: number): Status => {
-        const progressPercentage = totalPoints / TOTAL_MAX_POINTS;
-
-        if (progressPercentage >= 1) return Status.Finalizada;
-
-        const difference = totalPoints - expectedPoints;
-
-        if (progressPercentage >= 0.85) return Status.EliteII;
-        if (progressPercentage >= 0.70) return Status.EliteI;
-        if (difference > MAX_POINTS_PER_COURSE / 2) return Status.Avanzada;
-        if (difference >= -5 && difference <= MAX_POINTS_PER_COURSE / 2) return Status.AlDia;
-        if (difference < -5 && difference > -MAX_POINTS_PER_COURSE) return Status.Atrasada;
-        if (difference <= -MAX_POINTS_PER_COURSE) return Status.Riesgo;
-        if (totalPoints === 0) return Status.SinIniciar;
-
-        return Status.Atrasada;
-    }, []);
-
-    const sortedStudents = useMemo(() => {
-        const updatedStudents = students.map(student => {
-            const totalPoints = student.courseProgress.reduce((sum, p) => sum + p, 0);
-            const status = calculateStatus(totalPoints, expectedPointsToday);
-            return { ...student, totalPoints, status, expectedPoints: expectedPointsToday };
-        }).sort((a, b) => b.totalPoints - a.totalPoints);
-        return updatedStudents;
-    }, [students, expectedPointsToday, calculateStatus]);
-
-
-    useEffect(() => {
-        const initialData: Student[] = MOCK_NAMES.map((name, index) => ({
-            id: index + 1,
-            name,
-            courseProgress: Array(TOTAL_COURSES).fill(0),
-            totalPoints: 0,
-            expectedPoints: 0,
-            status: Status.SinIniciar,
-            identityVerified: false,
-            twoFactorVerified: false,
-            certificateStatus: Array(TOTAL_COURSES).fill(false),
-            finalCertificateStatus: false,
-            dtvStatus: false,
-        }));
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
         
-        try {
-            const savedData = localStorage.getItem('studentData');
-            if (savedData) {
-                const parsedData = JSON.parse(savedData);
-                setStudents(parsedData);
-                setInitialStudents(parsedData);
+        if(Array.isArray(data)) {
+            if(data.length > 0) {
+                const fetchedStudents = data.map((s, index) => ({
+                  id: s.id || index + 1,
+                  name: s.name,
+                  courseProgress: s.courseProgress || Array(TOTAL_COURSES).fill(0),
+                  identityVerified: s.identityVerified || false,
+                  twoFactorVerified: s.twoFactorVerified || false,
+                  certificateStatus: s.certificateStatus || Array(TOTAL_COURSES).fill(false),
+                  finalCertificateStatus: s.finalCertificateStatus || false,
+                  dtvStatus: s.dtvStatus || false,
+                }));
+                setStudents(fetchedStudents);
+                setStudentNames(fetchedStudents.map(s => s.name));
             } else {
-                setStudents(initialData);
-                setInitialStudents(initialData);
+                setStudents([]);
+                setStudentNames([]);
             }
-            const savedQuestions = localStorage.getItem('communityQuestions');
-            if(savedQuestions) {
-                const parsedQuestions: CommunityQuestion[] = JSON.parse(savedQuestions).map(q => ({...q, timestamp: new Date(q.timestamp), answers: q.answers.map(a => ({...a, timestamp: new Date(a.timestamp)})) }));
-                setQuestions(parsedQuestions);
-            } else {
-                 setQuestions([]);
-            }
-
-        } catch (e) {
-            console.error("Failed to load data from localStorage", e);
-            setStudents(initialData);
-            setInitialStudents(initialData);
-        }
-    }, []);
-
-
-    const handleUpdateProgress = (studentId: number, courseIndex: number, newProgress: number) => {
-        setStudents(prev =>
-            prev.map(s =>
-                s.id === studentId
-                    ? { ...s, courseProgress: s.courseProgress.map((p, i) => i === courseIndex ? newProgress : p) }
-                    : s
-            )
-        );
-    };
-
-    const handleUpdateVerification = (studentId: number, type: 'identity' | 'twoFactor') => {
-        setStudents(prev => prev.map(s => {
-            if (s.id === studentId) {
-                if (type === 'identity') return { ...s, identityVerified: !s.identityVerified };
-                if (type === 'twoFactor') return { ...s, twoFactorVerified: !s.twoFactorVerified };
-            }
-            return s;
-        }));
-    };
-    
-    const handleUpdateCertificateStatus = (studentId: number, courseIndex: number) => {
-        setStudents(prev => prev.map(s => {
-            if (s.id === studentId) {
-                const newStatus = [...s.certificateStatus];
-                newStatus[courseIndex] = !newStatus[courseIndex];
-                return { ...s, certificateStatus: newStatus };
-            }
-            return s;
-        }));
-    };
-
-    const handleUpdateOtherStatus = (studentId: number, type: 'final' | 'dtv') => {
-        setStudents(prev => prev.map(s => {
-            if (s.id === studentId) {
-                if(type === 'final') return { ...s, finalCertificateStatus: !s.finalCertificateStatus };
-                if(type === 'dtv') return { ...s, dtvStatus: !s.dtvStatus };
-            }
-            return s;
-        }));
-    };
-
-    const handleSave = () => {
-        setSyncStatus({ status: 'syncing', time: null });
-        try {
-            localStorage.setItem('studentData', JSON.stringify(students));
-            setInitialStudents(students);
-            setSyncStatus({ status: 'success', time: new Date() });
-        } catch (e) {
-            console.error("Failed to save data to localStorage", e);
-            setSyncStatus({ status: 'error', time: new Date(), message: "Error al guardar en local." });
-        }
-    };
-    
-    const handleAskQuestion = (questionText: string) => {
-        const newQuestion: CommunityQuestion = {
-            id: Date.now(),
-            author: 'Instructor',
-            text: questionText,
-            timestamp: new Date(),
-            answers: []
-        };
-        const updatedQuestions = [newQuestion, ...questions];
-        setQuestions(updatedQuestions);
-        localStorage.setItem('communityQuestions', JSON.stringify(updatedQuestions));
-    };
-
-    const handleAddAnswer = (questionId: number, answerText: string) => {
-        const newAnswer: Answer = {
-            id: Date.now(),
-            author: 'Instructor',
-            text: answerText,
-            timestamp: new Date(),
-        };
-        const updatedQuestions = questions.map(q => {
-            if (q.id === questionId) {
-                return { ...q, answers: [...q.answers, newAnswer] };
-            }
-            return q;
-        });
-        setQuestions(updatedQuestions);
-        localStorage.setItem('communityQuestions', JSON.stringify(updatedQuestions));
-    };
-    
-
-    const handlePasswordSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (password === 'admin') {
-            setIsAuthenticated(true);
+            setSyncStatus({ status: 'success', time: new Date(), message: 'Datos cargados correctamente.' });
             setIsReadOnly(false);
-            setPassword('');
         } else {
-            alert('Contraseña incorrecta');
+            throw new Error("Formato de datos inesperado recibido del servidor.");
         }
+        setHasUnsavedChanges(false);
+        
+    } catch (error: any) {
+        console.error("Failed to fetch from Google Sheets:", error);
+        setLoadError(`Error al cargar datos: ${error.message}. La aplicación está en modo de solo lectura.`);
+        setStudents([]);
+        setIsReadOnly(true);
+        setSyncStatus({ status: 'error', time: new Date(), message: 'Error de conexión.' });
+    }
+  }, []);
+
+  useEffect(() => {
+      const savedDriveUrl = localStorage.getItem('driveFolderUrl') || '';
+      setDriveFolderUrl(savedDriveUrl);
+  }, []);
+  
+  useEffect(() => {
+    if (isInitialLoad.current) {
+        isInitialLoad.current = false;
+        fetchInitialData();
+        initializeCommunityQuestions();
+    }
+  }, [fetchInitialData, initializeCommunityQuestions]);
+
+  const handleUpdateStudentProgress = useCallback((studentId: number, courseIndex: number, newProgress: number) => {
+    setStudents(currentStudents =>
+      currentStudents.map(student => {
+        if (student.id === studentId) {
+          const updatedCourseProgress = [...student.courseProgress];
+          updatedCourseProgress[courseIndex] = newProgress;
+          return { ...student, courseProgress: updatedCourseProgress };
+        }
+        return student;
+      })
+    );
+    setHasUnsavedChanges(true);
+  }, []);
+  
+  const formatDate = (dateString: string) => {
+      const date = parseDateAsUTC(dateString);
+      if (isNaN(date.getTime())) return '...';
+      return date.toLocaleDateString('es-ES', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  const currentCourseAndModule = useMemo(() => {
+    const today = getTodayInElSalvador();
+
+    if (!schedule || schedule.length === 0) {
+        return { course: 'Plan no definido', module: 'No hay tema para hoy' };
+    }
+
+    const firstDate = parseDateAsUTC(schedule[0].date);
+    if (isNaN(firstDate.getTime()) || today.getTime() < firstDate.getTime()) {
+        return { course: 'El curso aún no ha comenzado', module: `Inicia el ${formatDate(schedule[0].date)}` };
+    }
+
+    const lastDate = parseDateAsUTC(schedule[schedule.length - 1].date);
+    if (!isNaN(lastDate.getTime()) && today.getTime() > lastDate.getTime()) {
+         return { course: '¡Curso Finalizado!', module: 'Felicidades por completar el programa.' };
+    }
+
+    let currentTask = null;
+    for (let i = schedule.length - 1; i >= 0; i--) {
+        const itemDate = parseDateAsUTC(schedule[i].date);
+        if (!isNaN(itemDate.getTime()) && itemDate.getTime() <= today.getTime()) {
+            currentTask = schedule[i];
+            break;
+        }
+    }
+    
+    return currentTask || { course: 'Plan no definido', module: 'No hay tema para hoy' };
+  }, []);
+
+  const { processedStudents, expectedPointsToday } = useMemo(() => {
+    const start = parseDateAsUTC(startDate);
+
+    if (isNaN(start.getTime()) || totalWorkingDays <= 0) {
+      const allStudentsWithZero = students.map(student => {
+        const totalPoints = student.courseProgress.reduce((sum, current) => sum + current, 0);
+        return { ...student, totalPoints, expectedPoints: 0, status: totalPoints === 0 ? Status.SinIniciar : Status.AlDia };
+      });
+      return {
+        processedStudents: allStudentsWithZero.sort((a, b) => b.totalPoints - a.totalPoints),
+        expectedPointsToday: 0
+      };
+    }
+
+    const parsedBreaks = breaks.map(b => ({
+        start: parseDateAsUTC(b.start),
+        end: parseDateAsUTC(b.end)
+    })).filter(b => !isNaN(b.start.getTime()) && !isNaN(b.end.getTime()));
+
+    const isDateInBreaks = (date: Date): boolean => {
+        for (const breakPeriod of parsedBreaks) {
+            if (date.getTime() >= breakPeriod.start.getTime() && date.getTime() <= breakPeriod.end.getTime()) return true;
+        }
+        return false;
     };
     
-    const renderActiveView = () => {
-        switch(activeView) {
-            case 'monitor':
-                return (
-                    <div className="space-y-6">
-                        <SaveChangesHeader 
-                            syncStatus={syncStatus}
-                            onSave={handleSave}
-                            hasUnsavedChanges={hasUnsavedChanges}
-                            isReadOnly={isReadOnly}
-                        />
-                        <AIAnalyzer students={sortedStudents} expectedPointsToday={expectedPointsToday} />
-                        <LeaderboardTable 
-                            students={sortedStudents} 
-                            onUpdateProgress={handleUpdateProgress} 
-                            isReadOnly={isReadOnly}
-                            currentCourseName={currentCourseName}
-                        />
-                    </div>
-                );
-            case 'verification':
-                return <VerificationView students={sortedStudents} onUpdateVerification={handleUpdateVerification} isReadOnly={isReadOnly}/>;
-            case 'certificates':
-                return <CertificatesView students={sortedStudents} onUpdateCertificateStatus={handleUpdateCertificateStatus} onUpdateOtherStatus={handleUpdateOtherStatus} isReadOnly={isReadOnly}/>;
-            case 'tools':
-                return <ToolsView />;
-            case 'help':
-                 return <HelpView 
-                    questions={questions.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime())}
-                    onAskQuestion={handleAskQuestion}
-                    onAddAnswer={handleAddAnswer}
-                    driveFolderUrl="https://drive.google.com/drive/folders/1FEXCIxMCTeg2XEcBvSgMuUQv5XlgQtX_?usp=drive_link" 
-                 />;
-            case 'config':
-                return (
-                     <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm max-w-md mx-auto">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4">Configuración</h2>
-                        {!isAuthenticated ? (
-                            <form onSubmit={handlePasswordSubmit} className="space-y-4">
-                                <div>
-                                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">Contraseña de Administrador</label>
-                                    <input 
-                                        type="password"
-                                        id="password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="mt-1 w-full bg-white border-gray-300 rounded-md p-2 text-gray-900 focus:ring-2 focus:ring-sky-500 focus:outline-none"
-                                    />
-                                </div>
-                                <button type="submit" className="w-full py-2 px-4 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500">Desbloquear Modo Edición</button>
-                            </form>
-                        ) : (
-                            <div className="text-center space-y-4">
-                                <p className="text-green-600 font-semibold">El modo de edición está activado.</p>
-                                <button onClick={() => { setIsAuthenticated(false); setIsReadOnly(true); }} className="w-full py-2 px-4 bg-amber-500 text-white font-semibold rounded-lg hover:bg-amber-600">Bloquear Edición</button>
-                            </div>
-                        )}
-                    </div>
-                );
-            default:
-                return null;
-        }
+    const pointsPerDay = TOTAL_MAX_POINTS / totalWorkingDays;
+    const today = getTodayInElSalvador();
+    let elapsedWorkingDays = 0;
+
+    if (today.getTime() >= start.getTime()) {
+        for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
+           if (!isDateInBreaks(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())))) {
+               elapsedWorkingDays++;
+           }
+       }
+    }
+
+    const expectedPoints = elapsedWorkingDays * pointsPerDay;
+    const finalExpectedPoints = Math.min(expectedPoints, TOTAL_MAX_POINTS);
+    
+    const calculated = students.map(student => {
+      const totalPoints = student.courseProgress.reduce((sum, current) => sum + current, 0);
+      let status: Status;
+
+      if (totalPoints >= TOTAL_MAX_POINTS) status = Status.Finalizada;
+      else if (totalPoints === 0) status = Status.SinIniciar;
+      else {
+        const difference = totalPoints - finalExpectedPoints;
+        if (difference >= 150) status = Status.EliteII;
+        else if (difference >= 100) status = Status.EliteI;
+        else if (difference > 0) status = Status.Avanzada;
+        else if (difference >= -25) status = Status.AlDia;
+        else if (difference >= -75) status = Status.Atrasada;
+        else status = Status.Riesgo;
+      }
+      return { ...student, totalPoints, expectedPoints: finalExpectedPoints, status };
+    });
+
+    return {
+      processedStudents: calculated.sort((a, b) => b.totalPoints - a.totalPoints),
+      expectedPointsToday: finalExpectedPoints
     };
+  }, [students, startDate, totalWorkingDays, breaks]);
 
+  const statusCounts = useMemo(() => {
+    const counts: Record<Status, number> = {} as any;
+    orderedStatuses.forEach(s => counts[s] = 0);
+    for (const student of processedStudents) {
+        counts[student.status]++;
+    }
+    return counts;
+  }, [processedStudents]);
 
-    return (
-        <>
-        <header className="bg-white/80 backdrop-blur-sm sticky top-0 z-40 border-b border-gray-200">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
-                <AgapeLogo />
-                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Monitor de Progreso IT</h1>
-                    <p className="text-sm text-gray-500">Certificación en Soporte de TI de Google</p>
-                </div>
-            </div>
-        </header>
-
-        <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pb-28">
-           {renderActiveView()}
-        </main>
-        
-        <BottomNav activeView={activeView} setActiveView={setActiveView} />
-        </>
+  const handleUpdateVerificationStatus = useCallback((studentId: number, verificationType: 'identity' | 'twoFactor') => {
+    setStudents(currentStudents =>
+      currentStudents.map(student => {
+        if (student.id === studentId) {
+          if (verificationType === 'identity') return { ...student, identityVerified: !student.identityVerified };
+          else return { ...student, twoFactorVerified: !student.twoFactorVerified };
+        }
+        return student;
+      })
     );
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const handleUpdateCertificateStatus = useCallback((studentId: number, courseIndex: number) => {
+    setStudents(currentStudents =>
+      currentStudents.map(student => {
+        if (student.id === studentId) {
+          const updatedCertificateStatus = [...student.certificateStatus];
+          updatedCertificateStatus[courseIndex] = !updatedCertificateStatus[courseIndex];
+          return { ...student, certificateStatus: updatedCertificateStatus };
+        }
+        return student;
+      })
+    );
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const handleUpdateOtherCertificateStatus = useCallback((studentId: number, type: 'final' | 'dtv') => {
+    setStudents(currentStudents =>
+      currentStudents.map(student => {
+        if (student.id === studentId) {
+          if (type === 'final') return { ...student, finalCertificateStatus: !student.finalCertificateStatus };
+          else return { ...student, dtvStatus: !student.dtvStatus };
+        }
+        return student;
+      })
+    );
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const handleAskCommunityQuestion = useCallback((questionText: string) => {
+    const newQuestion: CommunityQuestion = {
+      id: Date.now(),
+      author: studentNames[Math.floor(Math.random() * studentNames.length)] || 'Anónimo',
+      text: questionText,
+      timestamp: new Date(),
+      answers: [],
+    };
+    setCommunityQuestions(prev => [newQuestion, ...prev]);
+  }, [studentNames]);
+
+  const handleAddCommunityAnswer = useCallback((questionId: number, answerText: string) => {
+    const newAnswer: Answer = {
+      id: Date.now(),
+      author: studentNames[Math.floor(Math.random() * studentNames.length)] || 'Anónimo',
+      text: answerText,
+      timestamp: new Date(),
+    };
+    setCommunityQuestions(prev => prev.map(q => q.id === questionId ? { ...q, answers: [...q.answers, newAnswer] } : q));
+  }, [studentNames]);
+
+  const handleAddBreak = () => {
+    if (newBreak.start && newBreak.end) {
+        const start = parseDateAsUTC(newBreak.start);
+        const end = parseDateAsUTC(newBreak.end);
+        if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start.getTime() <= end.getTime()) {
+            setBreaks([...breaks, { id: Date.now(), ...newBreak }]);
+            setNewBreak({ start: '', end: '' });
+            setHasUnsavedChanges(true);
+        } else {
+            alert('Las fechas del período de descanso no son válidas.');
+        }
+    }
+  };
+
+  const handleRemoveBreak = (id: number) => {
+    setBreaks(breaks.filter(b => b.id !== id));
+    setHasUnsavedChanges(true);
+  };
+  
+  const handleSetStartDate = (date: string) => {
+      setStartDate(date);
+      setHasUnsavedChanges(true);
+  }
+  const handleSetTotalWorkingDays = (days: number) => {
+      setTotalWorkingDays(days);
+      setHasUnsavedChanges(true);
+  }
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const text = e.target?.result as string;
+        try {
+            const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
+            if (lines.length < 2) throw new Error("Archivo CSV vacío o sin datos.");
+
+            const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+            const nameIndex = header.indexOf('nombre');
+
+            if (nameIndex === -1) throw new Error('El archivo CSV debe contener una columna "Nombre".');
+
+            const names = lines.slice(1).map(line => line.split(',')[nameIndex]?.trim()).filter(Boolean);
+
+            if (names.length > 0) {
+                initializeStudents(names);
+                alert(`${names.length} estudiantes importados.`);
+            } else {
+                throw new Error('No se encontraron nombres válidos.');
+            }
+        } catch (error: any) {
+            alert(`Error al procesar el archivo: ${error.message}`);
+        }
+        event.target.value = '';
+    };
+    reader.onerror = () => alert("Error al leer el archivo.");
+    reader.readAsText(file);
+  };
+  
+  const saveData = useCallback(async () => {
+      if (syncStatus.status === 'syncing' || isReadOnly) return;
+      setSyncStatus({ status: 'syncing', time: null, message: 'Guardando...' });
+      
+      try {
+        const payload = JSON.stringify(processedStudents);
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', },
+            body: new URLSearchParams({ 'payload': payload }),
+            redirect: 'follow',
+        });
+        
+        if (response.ok) {
+           const result = await response.json();
+           if (result.status === 'success') {
+                setSyncStatus({ status: 'success', time: new Date(), message: result.message || 'Datos guardados con éxito.' });
+                setHasUnsavedChanges(false);
+           } else {
+               throw new Error(result.message || 'Error desconocido del script.');
+           }
+        } else {
+            const errorText = await response.text();
+            throw new Error(errorText || `Error del servidor: ${response.status}`);
+        }
+      } catch (error: any) {
+         console.error("Save failed:", error);
+         const errorMessage = `Error al guardar: ${error.message}.`;
+         setSyncStatus({ status: 'error', time: new Date(), message: errorMessage });
+      }
+  }, [processedStudents, syncStatus.status, isReadOnly]);
+
+  const handleExportToCSV = useCallback(() => {
+    if (processedStudents.length === 0) {
+      alert("No hay datos para exportar.");
+      return;
+    }
+
+    const courseHeaders = COURSE_NAMES;
+    const certHeaders = COURSE_NAMES.map(name => `Certificado ${name}`);
+
+    const headers = [ "Nombre", "Estado", "Puntos Totales", "Puntos Esperados", ...courseHeaders, "Verif. Identidad", "Verif. Dos Pasos", ...certHeaders, "Cert. Final", "Certificado DTV" ];
+    const rows = processedStudents.map(s => [ `"${s.name.replace(/"/g, '""')}"`, s.status, s.totalPoints, s.expectedPoints.toFixed(2), ...s.courseProgress, s.identityVerified, s.twoFactorVerified, ...s.certificateStatus, s.finalCertificateStatus, s.dtvStatus ].join(','));
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `export_estudiantes_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [processedStudents]);
+
+  return (
+    <div className="min-h-screen p-4 sm:p-6 lg:p-8 pb-24">
+      <div className="max-w-7xl mx-auto">
+        <header className="mb-8">
+          <h1 className="text-4xl font-black text-gray-900 tracking-tight">
+            Monitor de Avance <span className="text-sky-600">Coursera TI</span>
+          </h1>
+          <p className="mt-2 text-lg text-gray-500">
+            Registro de puntajes y estado de la certificación en tiempo real.
+          </p>
+        </header>
+        
+        <main>
+            {loadError && (
+              <div className="bg-red-100 p-4 rounded-lg border border-red-200 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                  <div className="flex items-center gap-3">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500 h-6 w-6 flex-shrink-0"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                      <div>
+                          <p className="font-semibold text-gray-900">Error de Conexión</p>
+                          <p className="text-sm text-red-700">{loadError}</p>
+                      </div>
+                  </div>
+                  <button
+                      onClick={fetchInitialData}
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors"
+                  >
+                      Reintentar Conexión
+                  </button>
+              </div>
+          )}
+
+          {activeView === 'monitor' && (
+            <div>
+              <SaveChangesHeader syncStatus={syncStatus} onSave={saveData} hasUnsavedChanges={hasUnsavedChanges} isReadOnly={isReadOnly} />
+              <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+                  <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                      <h3 className="text-sm font-medium text-gray-500">Puntaje Esperado a la Fecha</h3>
+                      <p className="text-3xl font-bold text-gray-900 mt-1">{expectedPointsToday.toFixed(2)}</p>
+                  </div>
+                  <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm flex flex-col justify-center">
+                      <h3 className="text-sm font-medium text-gray-500 mb-2">Enfoque del Día</h3>
+                      <p className="text-lg font-semibold text-gray-900 leading-tight truncate" title={currentCourseAndModule.course}>
+                          {currentCourseAndModule.course}
+                      </p>
+                      <p className="text-md text-sky-600 mt-1 truncate" title={currentCourseAndModule.module}>
+                          {currentCourseAndModule.module}
+                      </p>
+                  </div>
+              </section>
+              
+              <section className="mb-8">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-4">
+                  {orderedStatuses.map(status => {
+                    const count = statusCounts[status];
+                    const config = STATUS_CONFIG[status];
+                    if (!config) return null;
+                    return (
+                      <div key={status} className={`p-4 rounded-lg border border-gray-200 shadow-sm ${config.color}`}>
+                        <div className="flex justify-between items-start">
+                          <h4 className={`text-sm font-medium ${config.textColor}`}>{status}</h4>
+                          <span className={`w-5 h-5 ${config.textColor}`}>{config.icon}</span>
+                        </div>
+                        <p className="text-3xl font-bold text-gray-900 mt-2">{count}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <AIAnalyzer students={processedStudents} expectedPointsToday={expectedPointsToday} />
+              
+              <div className="mb-6">
+                  <p className="text-sm text-gray-500 flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                      Haz clic en la celda de un curso para editar el puntaje.
+                  </p>
+              </div>
+
+              <LeaderboardTable students={processedStudents} onUpdateProgress={handleUpdateStudentProgress} isReadOnly={isReadOnly} currentCourseName={currentCourseAndModule.course} />
+            </div>
+          )}
+
+          {activeView === 'verification' && (
+            <>
+              <SaveChangesHeader syncStatus={syncStatus} onSave={saveData} hasUnsavedChanges={hasUnsavedChanges} isReadOnly={isReadOnly} />
+              <VerificationView students={processedStudents} onUpdateVerification={handleUpdateVerificationStatus} isReadOnly={isReadOnly} />
+            </>
+          )}
+
+          {activeView === 'certificates' && (
+            <>
+              <SaveChangesHeader syncStatus={syncStatus} onSave={saveData} hasUnsavedChanges={hasUnsavedChanges} isReadOnly={isReadOnly} />
+              <CertificatesView students={processedStudents} onUpdateCertificateStatus={handleUpdateCertificateStatus} onUpdateOtherStatus={handleUpdateOtherCertificateStatus} isReadOnly={isReadOnly} />
+            </>
+          )}
+
+          {activeView === 'tools' && <ToolsView />}
+
+          {activeView === 'help' && (
+            <HelpView 
+              questions={communityQuestions} 
+              onAskQuestion={handleAskCommunityQuestion}
+              onAddAnswer={handleAddCommunityAnswer}
+              driveFolderUrl={driveFolderUrl} 
+            />
+          )}
+
+          {activeView === 'config' && (
+            <ConfigView 
+              startDate={startDate}
+              setStartDate={handleSetStartDate}
+              totalWorkingDays={totalWorkingDays}
+              setTotalWorkingDays={handleSetTotalWorkingDays}
+              breaks={breaks}
+              newBreak={newBreak}
+              setNewBreak={setNewBreak}
+              handleAddBreak={handleAddBreak}
+              handleRemoveBreak={handleRemoveBreak}
+              handleFileUpload={handleFileUpload}
+              handleExportToCSV={handleExportToCSV}
+              initializeStudents={() => initializeStudents()}
+            />
+          )}
+
+        </main>
+      </div>
+      <BottomNav activeView={activeView} setActiveView={setActiveView} />
+    </div>
+  );
 };
 
 export default App;
