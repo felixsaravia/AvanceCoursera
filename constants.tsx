@@ -21,8 +21,7 @@ export const MOCK_NAMES: string[] = [
     "Tania Abigail Barahona Fuentes",
     "Tanya Gabriela González Ramírez",
     "María José Peraza Peña",
-    "Gabriela Alexandra Alvayeros Guirola",
-    "Isabella Gavidia Molina"
+    "Gabriela Alexandra Alvayeros Guirola"
 ];
 
 
