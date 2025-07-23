@@ -48,8 +48,9 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, onUpdateP
                 <th 
                   key={i} 
                   scope="col" 
-                  className={`text-center py-3.5 px-3 text-xs font-semibold text-gray-500 whitespace-nowrap transition-colors ${isCurrentCourse ? 'bg-sky-100' : ''}`} title={COURSE_NAMES[i]}>
-                  {name}
+                  className={`text-center py-3.5 px-3 text-xs text-gray-500 whitespace-nowrap transition-colors ${isCurrentCourse ? 'bg-sky-100' : ''}`} title={COURSE_NAMES[i]}>
+                  <div className="font-semibold">Curso {i + 1}</div>
+                  <div className="font-normal mt-1">{name}</div>
                 </th>
               );
             })}

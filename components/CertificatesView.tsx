@@ -35,7 +35,10 @@ const CertificatesView: React.FC<CertificatesViewProps> = ({ students, onUpdateC
                <tr>
                  <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-500">Nombre</th>
                  {COURSE_SHORT_NAMES.map((name, i) => (
-                    <th key={i} scope="col" className="py-3.5 px-3 text-center text-xs font-semibold text-gray-500 whitespace-nowrap" title={`Certificado: ${COURSE_NAMES[i]}`}>Cert. {name}</th>
+                    <th key={i} scope="col" className="py-3.5 px-3 text-center text-xs text-gray-500 whitespace-nowrap" title={`Certificado: ${COURSE_NAMES[i]}`}>
+                        <div className="font-semibold">Cert. Curso {i + 1}</div>
+                        <div className="font-normal mt-1">{name}</div>
+                    </th>
                  ))}
                  <th scope="col" className="py-3.5 px-3 text-center text-sm font-semibold text-gray-500 whitespace-nowrap">Certificado Final</th>
                  <th scope="col" className="py-3.5 px-3 text-center text-sm font-semibold text-gray-500 whitespace-nowrap">Certificado DTV</th>
