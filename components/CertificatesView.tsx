@@ -1,7 +1,7 @@
 import React from 'react';
 import { Student } from '../types';
 import VerificationStatusBadge from './VerificationStatusBadge';
-import { TOTAL_COURSES } from '../constants';
+import { TOTAL_COURSES, COURSE_SHORT_NAMES, COURSE_NAMES } from '../constants';
 
 interface CertificatesViewProps {
   students: Student[];
@@ -13,11 +13,11 @@ interface CertificatesViewProps {
 const CertificatesView: React.FC<CertificatesViewProps> = ({ students, onUpdateCertificateStatus, onUpdateOtherStatus, isReadOnly }) => {
   return (
     <section className="space-y-6">
-       <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
+       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <div>
-            <h2 className="text-xl font-bold text-white mb-1">Entrega de Certificados</h2>
-            <p className="text-slate-400">Haz clic en el estado de un certificado para marcarlo como entregado o pendiente.</p>
+            <h2 className="text-xl font-bold text-gray-900 mb-1">Entrega de Certificados</h2>
+            <p className="text-gray-500">Haz clic en el estado de un certificado para marcarlo como entregado o pendiente.</p>
           </div>
           <a
             href="https://drive.google.com/drive/folders/1FEXCIxMCTeg2XEcBvSgMuUQv5XlgQtX_?usp=drive_link"
@@ -31,20 +31,20 @@ const CertificatesView: React.FC<CertificatesViewProps> = ({ students, onUpdateC
         </div>
         <div className="overflow-x-auto">
            <table className="min-w-full">
-             <thead className="bg-slate-800">
+             <thead className="bg-gray-50">
                <tr>
-                 <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-slate-300">Nombre</th>
-                 {[...Array(TOTAL_COURSES)].map((_, i) => (
-                    <th key={i} scope="col" className="py-3.5 px-3 text-center text-sm font-semibold text-slate-300 whitespace-nowrap">Cert. C{i + 1}</th>
+                 <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-500">Nombre</th>
+                 {COURSE_SHORT_NAMES.map((name, i) => (
+                    <th key={i} scope="col" className="py-3.5 px-3 text-center text-xs font-semibold text-gray-500 whitespace-nowrap" title={`Certificado: ${COURSE_NAMES[i]}`}>Cert. {name}</th>
                  ))}
-                 <th scope="col" className="py-3.5 px-3 text-center text-sm font-semibold text-slate-300 whitespace-nowrap">Certificado Final</th>
-                 <th scope="col" className="py-3.5 px-3 text-center text-sm font-semibold text-slate-300 whitespace-nowrap">Certificado DTV</th>
+                 <th scope="col" className="py-3.5 px-3 text-center text-sm font-semibold text-gray-500 whitespace-nowrap">Certificado Final</th>
+                 <th scope="col" className="py-3.5 px-3 text-center text-sm font-semibold text-gray-500 whitespace-nowrap">Certificado DTV</th>
                </tr>
              </thead>
-             <tbody className="divide-y divide-slate-800 bg-slate-900">
+             <tbody className="divide-y divide-gray-200 bg-white">
                {students.map((student) => (
-                 <tr key={student.id} className="hover:bg-slate-800/60 group">
-                   <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-white">{student.name}</td>
+                 <tr key={student.id} className="hover:bg-gray-50 group">
+                   <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">{student.name}</td>
                    {student.certificateStatus.map((status, index) => (
                      <td key={index} className="whitespace-nowrap py-4 px-3 text-sm text-center">
                        <VerificationStatusBadge

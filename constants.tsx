@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Status, ScheduleItem } from './types';
 
@@ -31,43 +32,43 @@ export const TOTAL_MAX_POINTS = TOTAL_COURSES * MAX_POINTS_PER_COURSE;
 export const STATUS_CONFIG: { [key in Status]: { icon: React.ReactNode; color: string; textColor: string } } = {
     [Status.Finalizada]: {
         icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 17 17 23 15.79 13.88"></polyline></svg>,
-        color: 'bg-yellow-500/20',
-        textColor: 'text-yellow-400',
+        color: 'bg-yellow-100',
+        textColor: 'text-yellow-800',
     },
     [Status.EliteII]: {
         icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path><path d="M5 21l-1.18-6.88L2 9.27l6.91-1.01L12 2l3.09 6.26L22 9.27l-5 4.87L18 21"/></svg>,
-        color: 'bg-fuchsia-500/20',
-        textColor: 'text-fuchsia-400',
+        color: 'bg-fuchsia-100',
+        textColor: 'text-fuchsia-800',
     },
     [Status.EliteI]: {
         icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>,
-        color: 'bg-violet-500/20',
-        textColor: 'text-violet-400',
+        color: 'bg-violet-100',
+        textColor: 'text-violet-800',
     },
     [Status.Avanzada]: {
         icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 12-4-4-4 4"/><path d="m14 12v-10"/><path d="M4 12h10"/><path d="M4 20h16"/></svg>,
-        color: 'bg-sky-500/20',
-        textColor: 'text-sky-400',
+        color: 'bg-sky-100',
+        textColor: 'text-sky-800',
     },
     [Status.AlDia]: {
         icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>,
-        color: 'bg-green-500/20',
-        textColor: 'text-green-400',
+        color: 'bg-green-100',
+        textColor: 'text-green-800',
     },
     [Status.Atrasada]: {
         icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
-        color: 'bg-amber-500/20',
-        textColor: 'text-amber-400',
+        color: 'bg-amber-100',
+        textColor: 'text-amber-800',
     },
     [Status.Riesgo]: {
         icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>,
-        color: 'bg-red-500/20',
-        textColor: 'text-red-400',
+        color: 'bg-red-100',
+        textColor: 'text-red-800',
     },
     [Status.SinIniciar]: {
         icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="8" y1="12" x2="16" y2="12" /></svg>,
-        color: 'bg-slate-500/20',
-        textColor: 'text-slate-400',
+        color: 'bg-gray-200',
+        textColor: 'text-gray-800',
     }
 };
 
@@ -146,4 +147,17 @@ export const schedule: ScheduleItem[] = [
     { date: '2025-09-18', course: '6. Acelere su búsqueda de empleo con IA', module: 'Planifique su búsqueda de empleo con IA' },
     { date: '2025-09-19', course: '6. Acelere su búsqueda de empleo con IA', module: 'Gestione sus aplicaciones de empleo con IA' },
     { date: '2025-09-20', course: '6. Acelere su búsqueda de empleo con IA', module: 'Preparar y practicar entrevistas con IA' },
+];
+
+export const COURSE_NAMES: string[] = [
+    ...new Set(schedule.map(item => item.course))
+];
+
+export const COURSE_SHORT_NAMES: string[] = [
+    "Fundamentos de TI",
+    "Redes Informáticas",
+    "Sistemas Operativos",
+    "Admin. de Sistemas",
+    "Seguridad Informática",
+    "Búsqueda Empleo IA"
 ];

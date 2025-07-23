@@ -67,16 +67,16 @@ const AIAnalyzer: React.FC<AIAnalyzerProps> = ({ students, expectedPointsToday }
 
 
   return (
-    <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700 mb-8">
+    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-            <h2 className="text-xl font-bold text-white">Análisis con IA</h2>
-            <p className="text-slate-400 mt-1">Obtén un resumen y recomendaciones sobre el progreso del grupo.</p>
+            <h2 className="text-xl font-bold text-gray-900">Análisis con IA</h2>
+            <p className="text-gray-500 mt-1">Obtén un resumen y recomendaciones sobre el progreso del grupo.</p>
         </div>
         <button
           onClick={generateAnalysis}
           disabled={loading || students.length === 0}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
           {loading ? (
             <>
@@ -95,11 +95,11 @@ const AIAnalyzer: React.FC<AIAnalyzerProps> = ({ students, expectedPointsToday }
         </button>
       </div>
 
-      {error && <p className="mt-4 text-red-400 bg-red-500/10 p-3 rounded-md">{error}</p>}
+      {error && <p className="mt-4 text-red-700 bg-red-100 p-3 rounded-md">{error}</p>}
       
       {analysis && (
-         <div className="mt-6 pt-4 border-t border-slate-700">
-            <pre className="text-slate-300 whitespace-pre-wrap font-sans text-sm leading-relaxed">{analysis}</pre>
+         <div className="mt-6 pt-4 border-t border-gray-200">
+            <pre className="text-gray-600 whitespace-pre-wrap font-sans text-sm leading-relaxed">{analysis}</pre>
          </div>
       )}
     </div>

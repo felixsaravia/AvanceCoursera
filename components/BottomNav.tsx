@@ -10,7 +10,7 @@ const NavButton = ({ Icon, label, isActive, onClick }) => (
   <button
     onClick={onClick}
     className={`flex flex-col items-center justify-center w-full pt-2 pb-1 transition-colors duration-200 ${
-      isActive ? 'text-sky-400' : 'text-slate-400 hover:text-white'
+      isActive ? 'text-sky-600' : 'text-gray-500 hover:text-gray-900'
     }`}
     aria-current={isActive ? 'page' : undefined}
   >
@@ -46,7 +46,7 @@ const ConfigIcon = ({ className }) => (
 
 const BottomNav: React.FC<BottomNavProps> = ({ activeView, setActiveView }) => {
   return (
-    <nav className="fixed bottom-0 inset-x-0 bg-slate-800/80 backdrop-blur-sm border-t border-slate-700 shadow-t-lg z-50">
+    <nav className="fixed bottom-0 inset-x-0 bg-white/80 backdrop-blur-sm border-t border-gray-200 shadow-t-lg z-50">
       <div className="flex justify-around max-w-xl mx-auto">
         <NavButton
           Icon={MonitorIcon}

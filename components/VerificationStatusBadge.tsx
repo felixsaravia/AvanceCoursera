@@ -18,12 +18,12 @@ const VerificationStatusBadge: React.FC<VerificationStatusBadgeProps> = ({
   const baseClasses = "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors w-40 justify-center";
   
   const stateClasses = verified 
-    ? "bg-green-500/20 text-green-400" 
-    : "bg-amber-500/20 text-amber-400";
+    ? "bg-green-100 text-green-700" 
+    : "bg-amber-100 text-amber-700";
     
   const interactiveClasses = !disabled
-    ? (verified ? "hover:bg-green-500/30" : "hover:bg-amber-500/30")
-    : "opacity-60 cursor-not-allowed";
+    ? (verified ? "hover:bg-green-200" : "hover:bg-amber-200")
+    : "opacity-75 cursor-not-allowed";
   
   const icon = verified ? (
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

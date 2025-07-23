@@ -75,14 +75,14 @@ const PomodoroTimer: React.FC = () => {
 
 
     return (
-        <div className="bg-slate-800/50 p-8 rounded-lg border border-slate-700 flex flex-col items-center gap-6">
+        <div className="bg-white p-8 rounded-lg border border-gray-200 shadow-sm flex flex-col items-center gap-6">
             <div className="text-center">
-                <p className="text-lg font-semibold text-sky-400">{modeText[mode]}</p>
-                <p className="text-8xl font-bold text-white tracking-tighter my-4">
+                <p className="text-lg font-semibold text-sky-600">{modeText[mode]}</p>
+                <p className="text-8xl font-bold text-gray-900 tracking-tighter my-4">
                     {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
                 </p>
             </div>
-            <div className="w-full bg-slate-700 rounded-full h-2">
+            <div className="w-full bg-gray-200 rounded-full h-2">
                 <div className="bg-sky-500 h-2 rounded-full" style={{width: `${progress}%`}}></div>
             </div>
             <div className="flex gap-4">
@@ -94,12 +94,12 @@ const PomodoroTimer: React.FC = () => {
                 </button>
                 <button
                     onClick={resetTimer}
-                    className="w-32 py-3 px-4 bg-slate-600 text-slate-200 font-semibold rounded-lg hover:bg-slate-500 transition-colors"
+                    className="w-32 py-3 px-4 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors"
                 >
                     Reiniciar
                 </button>
             </div>
-            <p className="text-slate-400 text-sm">Ciclos de enfoque completados: <span className="font-bold text-white">{cycles}</span></p>
+            <p className="text-gray-500 text-sm">Ciclos de enfoque completados: <span className="font-bold text-gray-900">{cycles}</span></p>
         </div>
     );
 };

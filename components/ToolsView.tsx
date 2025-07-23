@@ -10,13 +10,13 @@ const ToolCard = ({ icon, title, description, onClick, disabled = false }) => (
     <button
         onClick={onClick}
         disabled={disabled}
-        className="w-full text-left p-6 bg-slate-800/50 rounded-lg border border-slate-700 hover:bg-slate-700/50 hover:border-sky-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full text-left p-6 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 hover:border-sky-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
     >
         <div className="flex items-center gap-4">
-            <div className="p-3 bg-slate-700 rounded-lg text-sky-400">{icon}</div>
+            <div className="p-3 bg-gray-100 rounded-lg text-sky-600">{icon}</div>
             <div>
-                <h3 className="text-lg font-bold text-white">{title}</h3>
-                <p className="text-sm text-slate-400 mt-1">{description}</p>
+                <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+                <p className="text-sm text-gray-500 mt-1">{description}</p>
             </div>
         </div>
     </button>
@@ -73,13 +73,13 @@ const ToolsView: React.FC = () => {
         <section className="space-y-8">
             <div className="flex justify-between items-center">
                 <div>
-                    <h2 className="text-2xl font-bold text-white">Herramientas</h2>
-                    <p className="text-slate-400 mt-1">Utilidades para potenciar tu aprendizaje.</p>
+                    <h2 className="text-2xl font-bold text-gray-900">Herramientas</h2>
+                    <p className="text-gray-500 mt-1">Utilidades para potenciar tu aprendizaje.</p>
                 </div>
                 {activeTool && (
                     <button
                         onClick={() => setActiveTool(null)}
-                        className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-slate-300 font-semibold rounded-lg hover:bg-slate-600 transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-600 font-semibold rounded-lg hover:bg-gray-300 transition-colors"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                         Volver

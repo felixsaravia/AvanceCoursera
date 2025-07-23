@@ -1,8 +1,7 @@
 
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Student, Status, CommunityQuestion, Answer, ScheduleItem, Break } from './types';
-import { MOCK_NAMES, TOTAL_COURSES, MAX_POINTS_PER_COURSE, TOTAL_MAX_POINTS, STATUS_CONFIG, schedule, orderedStatuses } from './constants';
+import { MOCK_NAMES, TOTAL_COURSES, MAX_POINTS_PER_COURSE, TOTAL_MAX_POINTS, STATUS_CONFIG, schedule, orderedStatuses, COURSE_NAMES } from './constants';
 import LeaderboardTable from './components/LeaderboardTable';
 import AIAnalyzer from './components/AIAnalyzer';
 import BottomNav from './components/BottomNav';
@@ -58,32 +57,32 @@ const SaveChangesHeader: React.FC<{
 
     if (isReadOnly && syncStatus.status !== 'syncing') {
         statusText = 'Modo de solo lectura';
-        statusColor = 'text-slate-400';
+        statusColor = 'text-gray-500';
         icon = <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.73 18l-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>;
     } else if (isSyncing) {
         statusText = 'Guardando...';
-        statusColor = 'text-sky-400';
+        statusColor = 'text-sky-600';
         icon = <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
     } else if (syncStatus.status === 'error') {
         statusText = syncStatus.message || 'Error al guardar';
-        statusColor = 'text-red-400';
+        statusColor = 'text-red-600';
         icon = <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>;
     } else if (hasUnsavedChanges) {
         statusText = 'Cambios sin guardar';
-        statusColor = 'text-amber-400';
+        statusColor = 'text-amber-600';
         icon = <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>;
     } else {
         statusText = 'Todos los cambios guardados';
-        statusColor = 'text-green-400';
+        statusColor = 'text-green-600';
         icon = <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
     }
 
     return (
-        <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-3">
             <span className={statusColor}>{icon}</span>
             <div>
-              <p className="font-semibold text-white">Guardar en Google Sheets</p>
+              <p className="font-semibold text-gray-900">Guardar en Google Sheets</p>
               <p className={`text-sm ${statusColor}`}>
                   {statusText}
                   {syncStatus.status === 'success' && !hasUnsavedChanges && ` - Última vez: ${formatSyncTime(syncStatus.time)}`}
@@ -93,7 +92,7 @@ const SaveChangesHeader: React.FC<{
           <button
             onClick={onSave}
             disabled={isSyncing || !hasUnsavedChanges || isReadOnly}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed disabled:text-slate-400"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed disabled:text-gray-500"
           >
             {isSyncing ? 'Guardando...' : (
                 <>
@@ -125,46 +124,46 @@ const ConfigView: React.FC<{
   handleFileUpload, handleExportToCSV, initializeStudents
 }) => (
     <section className="space-y-8">
-        <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
-            <h2 className="text-xl font-bold text-white mb-4">Parámetros del Curso</h2>
+        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Parámetros del Curso</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label htmlFor="start-date" className="block text-sm font-medium text-slate-300 mb-2">Fecha de Inicio del Curso</label>
-                    <input type="date" id="start-date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-slate-700 border-slate-600 rounded-md p-2 text-white focus:ring-2 focus:ring-sky-500" />
+                    <label htmlFor="start-date" className="block text-sm font-medium text-gray-600 mb-2">Fecha de Inicio del Curso</label>
+                    <input type="date" id="start-date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-gray-50 border-gray-300 rounded-md p-2 text-gray-900 focus:ring-2 focus:ring-sky-500" />
                 </div>
                 <div>
-                    <label htmlFor="total-days" className="block text-sm font-medium text-slate-300 mb-2">Total de Días Laborales</label>
-                    <input type="number" id="total-days" value={totalWorkingDays} onChange={e => setTotalWorkingDays(parseInt(e.target.value, 10))} className="w-full bg-slate-700 border-slate-600 rounded-md p-2 text-white focus:ring-2 focus:ring-sky-500" />
+                    <label htmlFor="total-days" className="block text-sm font-medium text-gray-600 mb-2">Total de Días Laborales</label>
+                    <input type="number" id="total-days" value={totalWorkingDays} onChange={e => setTotalWorkingDays(parseInt(e.target.value, 10))} className="w-full bg-gray-50 border-gray-300 rounded-md p-2 text-gray-900 focus:ring-2 focus:ring-sky-500" />
                 </div>
             </div>
         </div>
 
-        <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
-            <h2 className="text-xl font-bold text-white mb-4">Períodos de Descanso</h2>
+        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Períodos de Descanso</h2>
             <div className="space-y-4 mb-6">
                 {breaks.map(b => (
-                    <div key={b.id} className="flex items-center justify-between bg-slate-800 p-3 rounded-md">
-                        <p className="text-slate-300">Del <span className="font-semibold text-sky-400">{b.start}</span> al <span className="font-semibold text-sky-400">{b.end}</span></p>
+                    <div key={b.id} className="flex items-center justify-between bg-gray-100 p-3 rounded-md">
+                        <p className="text-gray-700">Del <span className="font-semibold text-sky-600">{b.start}</span> al <span className="font-semibold text-sky-600">{b.end}</span></p>
                         <button onClick={() => handleRemoveBreak(b.id)} className="text-red-500 hover:text-red-400">&times;</button>
                     </div>
                 ))}
             </div>
             <div className="flex flex-col md:flex-row items-center gap-4">
-                <input type="date" value={newBreak.start} onChange={e => setNewBreak({ ...newBreak, start: e.target.value })} className="flex-1 w-full md:w-auto bg-slate-700 border-slate-600 rounded-md p-2 text-white" />
-                <input type="date" value={newBreak.end} onChange={e => setNewBreak({ ...newBreak, end: e.target.value })} className="flex-1 w-full md:w-auto bg-slate-700 border-slate-600 rounded-md p-2 text-white" />
+                <input type="date" value={newBreak.start} onChange={e => setNewBreak({ ...newBreak, start: e.target.value })} className="flex-1 w-full md:w-auto bg-gray-50 border-gray-300 rounded-md p-2 text-gray-900" />
+                <input type="date" value={newBreak.end} onChange={e => setNewBreak({ ...newBreak, end: e.target.value })} className="flex-1 w-full md:w-auto bg-gray-50 border-gray-300 rounded-md p-2 text-gray-900" />
                 <button onClick={handleAddBreak} className="w-full md:w-auto px-4 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500">Añadir</button>
             </div>
         </div>
 
-        <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
-            <h2 className="text-xl font-bold text-white mb-4">Gestión de Estudiantes</h2>
+        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Gestión de Estudiantes</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                <label className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-600 text-white font-semibold rounded-lg hover:bg-slate-500 transition-colors cursor-pointer">
+                <label className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors cursor-pointer">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                     Importar CSV
                     <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" />
                 </label>
-                <button onClick={handleExportToCSV} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-600 text-white font-semibold rounded-lg hover:bg-slate-500 transition-colors">
+                <button onClick={handleExportToCSV} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     Exportar CSV
                 </button>
@@ -560,8 +559,8 @@ const App: React.FC = () => {
       return;
     }
 
-    const courseHeaders = Array.from({ length: TOTAL_COURSES }, (_, i) => `C${i + 1}`);
-    const certHeaders = Array.from({ length: TOTAL_COURSES }, (_, i) => `Cert. C${i + 1}`);
+    const courseHeaders = COURSE_NAMES;
+    const certHeaders = COURSE_NAMES.map(name => `Certificado ${name}`);
 
     const headers = [ "Nombre", "Estado", "Puntos Totales", "Puntos Esperados", ...courseHeaders, "Verif. Identidad", "Verif. Dos Pasos", ...certHeaders, "Cert. Final", "Certificado DTV" ];
     const rows = processedStudents.map(s => [ `"${s.name.replace(/"/g, '""')}"`, s.status, s.totalPoints, s.expectedPoints.toFixed(2), ...s.courseProgress, s.identityVerified, s.twoFactorVerified, ...s.certificateStatus, s.finalCertificateStatus, s.dtvStatus ].join(','));
@@ -581,22 +580,22 @@ const App: React.FC = () => {
     <div className="min-h-screen p-4 sm:p-6 lg:p-8 pb-24">
       <div className="max-w-7xl mx-auto">
         <header className="mb-8">
-          <h1 className="text-4xl font-black text-white tracking-tight">
-            Monitor de Avance <span className="text-sky-400">Coursera TI</span>
+          <h1 className="text-4xl font-black text-gray-900 tracking-tight">
+            Monitor de Avance <span className="text-sky-600">Coursera TI</span>
           </h1>
-          <p className="mt-2 text-lg text-slate-400">
+          <p className="mt-2 text-lg text-gray-500">
             Registro de puntajes y estado de la certificación en tiempo real.
           </p>
         </header>
         
         <main>
             {loadError && (
-              <div className="bg-red-500/10 p-4 rounded-lg border border-red-500/30 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="bg-red-100 p-4 rounded-lg border border-red-200 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
                   <div className="flex items-center gap-3">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-400 h-6 w-6 flex-shrink-0"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500 h-6 w-6 flex-shrink-0"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
                       <div>
-                          <p className="font-semibold text-white">Error de Conexión</p>
-                          <p className="text-sm text-red-300">{loadError}</p>
+                          <p className="font-semibold text-gray-900">Error de Conexión</p>
+                          <p className="text-sm text-red-700">{loadError}</p>
                       </div>
                   </div>
                   <button
@@ -612,16 +611,16 @@ const App: React.FC = () => {
             <div>
               <SaveChangesHeader syncStatus={syncStatus} onSave={saveData} hasUnsavedChanges={hasUnsavedChanges} isReadOnly={isReadOnly} />
               <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-                  <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
-                      <h3 className="text-sm font-medium text-slate-400">Puntaje Esperado a la Fecha</h3>
-                      <p className="text-3xl font-bold text-white mt-1">{expectedPointsToday.toFixed(2)}</p>
+                  <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                      <h3 className="text-sm font-medium text-gray-500">Puntaje Esperado a la Fecha</h3>
+                      <p className="text-3xl font-bold text-gray-900 mt-1">{expectedPointsToday.toFixed(2)}</p>
                   </div>
-                  <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700 flex flex-col justify-center">
-                      <h3 className="text-sm font-medium text-slate-400 mb-2">Enfoque del Día</h3>
-                      <p className="text-lg font-semibold text-white leading-tight truncate" title={currentCourseAndModule.course}>
+                  <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm flex flex-col justify-center">
+                      <h3 className="text-sm font-medium text-gray-500 mb-2">Enfoque del Día</h3>
+                      <p className="text-lg font-semibold text-gray-900 leading-tight truncate" title={currentCourseAndModule.course}>
                           {currentCourseAndModule.course}
                       </p>
-                      <p className="text-md text-sky-400 mt-1 truncate" title={currentCourseAndModule.module}>
+                      <p className="text-md text-sky-600 mt-1 truncate" title={currentCourseAndModule.module}>
                           {currentCourseAndModule.module}
                       </p>
                   </div>
@@ -634,12 +633,12 @@ const App: React.FC = () => {
                     const config = STATUS_CONFIG[status];
                     if (!config) return null;
                     return (
-                      <div key={status} className={`p-4 rounded-lg border border-slate-700 ${config.color}`}>
+                      <div key={status} className={`p-4 rounded-lg border border-gray-200 shadow-sm ${config.color}`}>
                         <div className="flex justify-between items-start">
                           <h4 className={`text-sm font-medium ${config.textColor}`}>{status}</h4>
                           <span className={`w-5 h-5 ${config.textColor}`}>{config.icon}</span>
                         </div>
-                        <p className="text-3xl font-bold text-white mt-2">{count}</p>
+                        <p className="text-3xl font-bold text-gray-900 mt-2">{count}</p>
                       </div>
                     );
                   })}
@@ -649,13 +648,13 @@ const App: React.FC = () => {
               <AIAnalyzer students={processedStudents} expectedPointsToday={expectedPointsToday} />
               
               <div className="mb-6">
-                  <p className="text-sm text-slate-400 flex items-center gap-2">
+                  <p className="text-sm text-gray-500 flex items-center gap-2">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
-                      Haz clic en la celda de un curso (C1, C2...) para editar el puntaje.
+                      Haz clic en la celda de un curso para editar el puntaje.
                   </p>
               </div>
 
-              <LeaderboardTable students={processedStudents} onUpdateProgress={handleUpdateStudentProgress} isReadOnly={isReadOnly} />
+              <LeaderboardTable students={processedStudents} onUpdateProgress={handleUpdateStudentProgress} isReadOnly={isReadOnly} currentCourseName={currentCourseAndModule.course} />
             </div>
           )}
 

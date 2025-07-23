@@ -68,22 +68,22 @@ const MotivationalBoostGenerator: React.FC = () => {
     };
 
     return (
-        <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
+        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
             <div className="text-center">
-                <h3 className="text-lg font-bold text-white mb-2">Impulso Motivacional</h3>
-                <p className="text-slate-400 mb-6">Un pequeño empujón para recargar tu energía y seguir adelante.</p>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Impulso Motivacional</h3>
+                <p className="text-gray-500 mb-6">Un pequeño empujón para recargar tu energía y seguir adelante.</p>
             </div>
             
             <div className="space-y-4">
                  <div>
-                    <p className="text-sm font-semibold text-slate-300 mb-3 text-center">Si te sientes así, pide un consejo:</p>
+                    <p className="text-sm font-semibold text-gray-700 mb-3 text-center">Si te sientes así, pide un consejo:</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {commonSituations.map(situation => (
                             <button
                                 key={situation.id}
                                 onClick={() => generateMotivation(situation.text)}
                                 disabled={loading}
-                                className="w-full text-left p-3 bg-slate-700/50 rounded-lg border border-slate-600 hover:bg-slate-700 hover:border-sky-600 transition-all text-sm text-slate-300 disabled:opacity-50"
+                                className="w-full text-left p-3 bg-gray-100/50 rounded-lg border border-gray-200 hover:bg-gray-100 hover:border-sky-500 transition-all text-sm text-gray-600 disabled:opacity-50"
                             >
                                 {situation.text}
                             </button>
@@ -92,15 +92,15 @@ const MotivationalBoostGenerator: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <hr className="flex-grow border-slate-700"/>
-                    <span className="text-slate-500 text-xs font-bold">O</span>
-                    <hr className="flex-grow border-slate-700"/>
+                    <hr className="flex-grow border-gray-200"/>
+                    <span className="text-gray-400 text-xs font-bold">O</span>
+                    <hr className="flex-grow border-gray-200"/>
                 </div>
 
                 <button
                     onClick={() => generateMotivation()}
                     disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed"
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
                     {loading && !motivation ? (
                         <>
@@ -112,17 +112,17 @@ const MotivationalBoostGenerator: React.FC = () => {
             </div>
 
 
-            {error && <p className="mt-4 text-red-400 bg-red-500/10 p-3 rounded-md">{error}</p>}
+            {error && <p className="mt-4 text-red-700 bg-red-100 p-3 rounded-md">{error}</p>}
 
             {loading && !motivation && (
-                 <div className="mt-6 pt-6 border-t border-slate-700 text-center">
-                    <p className="text-slate-400 animate-pulse">La IA está preparando el consejo perfecto para ti...</p>
+                 <div className="mt-6 pt-6 border-t border-gray-200 text-center">
+                    <p className="text-gray-500 animate-pulse">La IA está preparando el consejo perfecto para ti...</p>
                  </div>
             )}
             
             {motivation && !loading && (
-                <div className="mt-6 pt-6 border-t border-slate-700">
-                    <blockquote className="text-lg text-slate-200 font-semibold border-l-4 border-sky-500 pl-4 text-left">
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                    <blockquote className="text-lg text-gray-700 font-semibold border-l-4 border-sky-500 pl-4 text-left">
                         {motivation}
                     </blockquote>
                 </div>

@@ -98,11 +98,11 @@ const AIImageQuery: React.FC = () => {
     };
 
     return (
-        <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700 space-y-4">
-            <h3 className="text-lg font-bold text-white">Análisis de Imagen con IA</h3>
+        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-4">
+            <h3 className="text-lg font-bold text-gray-900">Análisis de Imagen con IA</h3>
 
             {!isCameraOpen && !imageSrc && (
-                <button onClick={openCamera} className="w-full flex items-center justify-center gap-3 p-4 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors">
+                <button onClick={openCamera} className="w-full flex items-center justify-center gap-3 p-4 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
                     Abrir Cámara para Tomar Foto
                 </button>
@@ -114,7 +114,7 @@ const AIImageQuery: React.FC = () => {
                     <canvas ref={canvasRef} className="hidden" />
                     <div className="flex gap-4">
                         <button onClick={captureImage} className="w-full py-2 px-4 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500">Capturar</button>
-                        <button onClick={closeCamera} className="w-full py-2 px-4 bg-slate-600 text-slate-200 font-semibold rounded-lg hover:bg-slate-500">Cancelar</button>
+                        <button onClick={closeCamera} className="w-full py-2 px-4 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300">Cancelar</button>
                     </div>
                 </div>
             )}
@@ -122,30 +122,30 @@ const AIImageQuery: React.FC = () => {
             {imageSrc && (
                 <div className="space-y-4">
                     <img src={imageSrc} alt="Captura del usuario" className="w-full max-w-sm mx-auto rounded-lg" />
-                    <button onClick={() => { setImageSrc(null); setResponse(''); }} className="w-full text-sm text-sky-400 hover:text-sky-300">Tomar otra foto</button>
+                    <button onClick={() => { setImageSrc(null); setResponse(''); }} className="w-full text-sm text-sky-600 hover:text-sky-500">Tomar otra foto</button>
                     
                     <form onSubmit={handleSubmit}>
                         <textarea
                             value={prompt}
                             onChange={e => setPrompt(e.target.value)}
                             placeholder="Ej: ¿Qué tipo de puerto es este? ¿Para qué sirve?"
-                            className="w-full bg-slate-700 border-slate-600 rounded-md p-3 text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                            className="w-full bg-gray-50 border-gray-300 rounded-md p-3 text-gray-900 focus:ring-2 focus:ring-sky-500 focus:outline-none"
                             rows={3}
                             disabled={loading}
                         />
-                         <button type="submit" disabled={loading || !prompt.trim()} className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed">
+                         <button type="submit" disabled={loading || !prompt.trim()} className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed">
                              {loading ? 'Analizando...' : 'Preguntar a la IA'}
                          </button>
                     </form>
                 </div>
             )}
             
-            {error && <p className="text-red-400 bg-red-500/10 p-3 rounded-md">{error}</p>}
+            {error && <p className="text-red-700 bg-red-100 p-3 rounded-md">{error}</p>}
 
             {response && (
-                <div className="pt-4 border-t border-slate-700">
-                    <h4 className="font-semibold text-white mb-2">Respuesta:</h4>
-                    <pre className="text-slate-300 whitespace-pre-wrap font-sans text-sm leading-relaxed">{response}</pre>
+                <div className="pt-4 border-t border-gray-200">
+                    <h4 className="font-semibold text-gray-900 mb-2">Respuesta:</h4>
+                    <pre className="text-gray-600 whitespace-pre-wrap font-sans text-sm leading-relaxed">{response}</pre>
                 </div>
             )}
         </div>
