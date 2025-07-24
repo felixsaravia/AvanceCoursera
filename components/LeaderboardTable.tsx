@@ -87,9 +87,6 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, onUpdateP
             <th scope="col" className="w-16 text-center py-3.5 px-3 text-sm font-semibold text-gray-500"><span className="sr-only">Ver Perfil</span></th>
             <th scope="col" className="w-20 text-center py-3.5 px-3 text-sm font-semibold text-gray-500">Reporte</th>
             <th scope="col" className="py-3.5 px-3 text-left text-sm font-semibold text-gray-500">Estado</th>
-            <th scope="col" className="w-48 py-3.5 px-3 text-left text-sm font-semibold text-gray-500">Progreso Total</th>
-            <th scope="col" className="text-center py-3.5 px-3 text-sm font-semibold text-gray-500">Puntos</th>
-            <th scope="col" className="text-center py-3.5 px-3 text-sm font-semibold text-gray-500">Esperado</th>
             {COURSE_SHORT_NAMES.map((name, i) => {
               const isCurrentCourse = COURSE_NAMES[i] === currentCourseName;
               return (
@@ -102,6 +99,9 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, onUpdateP
                 </th>
               );
             })}
+            <th scope="col" className="w-48 py-3.5 px-3 text-left text-sm font-semibold text-gray-500">Progreso Total</th>
+            <th scope="col" className="text-center py-3.5 px-3 text-sm font-semibold text-gray-500">Puntos</th>
+            <th scope="col" className="text-center py-3.5 px-3 text-sm font-semibold text-gray-500">Esperado</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200 bg-white">
@@ -136,11 +136,6 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, onUpdateP
                 )}
               </td>
               <td className="whitespace-nowrap py-4 px-3 text-sm"><StatusBadge status={student.status} /></td>
-              <td className="whitespace-nowrap py-4 px-3 text-sm text-gray-600">
-                <ProgressBar progress={(student.totalPoints / TOTAL_MAX_POINTS) * 100} />
-              </td>
-              <td className="whitespace-nowrap text-center py-4 px-3 text-sm font-semibold text-sky-600">{student.totalPoints}</td>
-              <td className="whitespace-nowrap text-center py-4 px-3 text-sm text-gray-500">{Math.round(student.expectedPoints)}</td>
               {student.courseProgress.map((progress, i) => {
                 const isEditing = editingCell?.studentId === student.id && editingCell?.courseIndex === i;
                 const isCurrentCourse = COURSE_NAMES[i] === currentCourseName;
@@ -169,6 +164,11 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, onUpdateP
                   </td>
                 )
               })}
+              <td className="whitespace-nowrap py-4 px-3 text-sm text-gray-600">
+                <ProgressBar progress={(student.totalPoints / TOTAL_MAX_POINTS) * 100} />
+              </td>
+              <td className="whitespace-nowrap text-center py-4 px-3 text-sm font-semibold text-sky-600">{student.totalPoints}</td>
+              <td className="whitespace-nowrap text-center py-4 px-3 text-sm text-gray-500">{Math.round(student.expectedPoints)}</td>
             </tr>
           ))}
         </tbody>

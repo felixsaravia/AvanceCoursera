@@ -25,22 +25,27 @@ const StatusSummary: React.FC<StatusSummaryProps> = ({ students }) => {
   }, [students]);
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-4">
       {orderedStatuses.map(status => {
         const config = STATUS_CONFIG[status];
         const count = statusCounts[status] || 0;
         
         if (!config) return null;
 
+        const sizedIcon = React.isValidElement(config.icon)
+          ? React.cloneElement(config.icon as React.ReactElement<any>, {
+              className: `w-4 h-4 sm:w-5 sm:h-5 ${config.textColor}`,
+              strokeWidth: '2.5'
+            })
+          : null;
+
         return (
-          <div key={status} className={`p-3 rounded-lg shadow-sm ${config.color}`}>
+          <div key={status} className={`p-2 sm:p-3 rounded-lg shadow-sm ${config.color}`}>
             <div className="flex justify-between items-start">
-              <span className={`font-semibold text-sm ${config.textColor}`}>{status}</span>
-              <span className={`w-5 h-5 ${config.textColor}`}>
-                  {React.isValidElement(config.icon) ? React.cloneElement(config.icon, Object.assign({}, config.icon.props, { strokeWidth: '2.5' })) : null}
-              </span>
+              <span className={`font-semibold text-xs sm:text-sm ${config.textColor}`}>{status}</span>
+              {sizedIcon}
             </div>
-            <p className={`text-4xl font-bold mt-2 ${config.textColor}`}>{count}</p>
+            <p className={`text-3xl sm:text-4xl font-bold mt-1 sm:mt-2 ${config.textColor}`}>{count}</p>
           </div>
         );
       })}

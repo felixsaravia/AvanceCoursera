@@ -13,9 +13,15 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
     return null;
   }
 
+  const sizedIcon = React.isValidElement(config.icon)
+    ? React.cloneElement(config.icon as React.ReactElement<any>, {
+        className: 'w-3.5 h-3.5',
+      })
+    : null;
+
   return (
-    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${config.color} ${config.textColor}`}>
-      <span className="w-4 h-4">{config.icon}</span>
+    <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${config.color} ${config.textColor}`}>
+      {sizedIcon}
       <span>{status}</span>
     </div>
   );

@@ -198,7 +198,7 @@ const App: React.FC = () => {
 
     const calculateStatus = useCallback((totalPoints: number, expectedPoints: number): Status => {
         // Finalizada and Sin Iniciar are absolute states
-        if (totalPoints >= TOTAL_MAX_POINTS) return Status.Finalizada;
+        if (totalPoints === TOTAL_MAX_POINTS) return Status.Finalizada;
         if (totalPoints === 0) return Status.SinIniciar;
     
         const difference = totalPoints - expectedPoints;
@@ -551,7 +551,6 @@ const App: React.FC = () => {
                             currentModuleNumber={currentModuleNumber}
                         />
                          <StatusSummary students={sortedStudents} />
-                        <AIAnalyzer students={sortedStudents} expectedPointsToday={expectedPointsToday} />
                         <LeaderboardTable 
                             students={sortedStudents} 
                             onUpdateProgress={handleUpdateProgress} 
@@ -561,6 +560,7 @@ const App: React.FC = () => {
                             currentModuleNumber={currentModuleNumber}
                             onSelectStudent={handleSelectStudent}
                         />
+                        <AIAnalyzer students={sortedStudents} expectedPointsToday={expectedPointsToday} />
                     </div>
                 );
             case 'schedule':
