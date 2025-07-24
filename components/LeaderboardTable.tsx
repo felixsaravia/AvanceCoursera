@@ -9,51 +9,56 @@ interface LeaderboardTableProps {
   onUpdateProgress: (studentId: number, courseIndex: number, newProgress: number) => void;
   isReadOnly: boolean;
   currentCourseName: string;
+  currentModuleName: string;
+  currentModuleNumber: number;
+  onSelectStudent: (studentId: number) => void;
 }
 
-const generateWhatsAppMessage = (student: Student): string => {
-    const name = student.name.split(' ')[0]; // Use first name for a personal but formal touch
-    const totalPoints = student.totalPoints;
-    const expectedPoints = Math.round(student.expectedPoints);
-    const status = student.status;
-
-    let header = `Estimada ${name}, 👋 le comparto su reporte de avance en la certificación de TI.\n\n`;
-    let body = `*Puntaje Actual:* ${totalPoints} puntos\n*Puntaje Esperado:* ${expectedPoints} puntos\n*Estado:* ${status}\n\n`;
-    let footer = '';
-
-    switch (status) {
-        case Status.Finalizada:
-            footer = "¡EXTRAORDINARIO! 🥳 Ha completado la certificación. Su dedicación y esfuerzo han dado frutos. ¡Muchas felicidades por este gran logro! 🏆";
-            break;
-        case Status.EliteII:
-        case Status.EliteI:
-            footer = "¡IMPRESIONANTE! 🚀 Lleva un ritmo excepcional, superando todas las expectativas. Es un verdadero ejemplo para el grupo. ¡Siga así, va directo al éxito! 🔥";
-            break;
-        case Status.Avanzada:
-            footer = "¡EXCELENTE! ✨ Va por delante del calendario, ¡qué gran trabajo! Su proactividad la está llevando muy lejos. ¡Mantenga ese impulso! 💪";
-            break;
-        case Status.AlDia:
-            footer = "¡MUY BIEN! 👍 Va al día con el programa. Está demostrando constancia y disciplina. ¡Siga con ese buen ritmo para alcanzar su meta! 🎯";
-            break;
-        case Status.Atrasada:
-            footer = "¡Ánimo! 💪 Sabemos que puede ponerse al día. Organice su tiempo, enfóquese en el próximo módulo y verá cómo avanza. ¡No se rinda, cada paso cuenta! ✨";
-            break;
-        case Status.Riesgo:
-            footer = "¡No se preocupe, estamos para apoyarla! 🙏 Es momento de redoblar esfuerzos y enfocarse. Recuerde por qué empezó este camino. Si necesita ayuda, no dude en contactarme. ¡Confío en que lo logrará! 🤝";
-            break;
-        case Status.SinIniciar:
-            footer = "¡Es hora de empezar esta increíble aventura! 🚀 El primer paso es el más importante. Entre a la plataforma y complete su primera lección. ¡Estamos emocionados de ver su progreso! 😊";
-            break;
-        default:
-            footer = "¡Siga adelante con sus estudios! Cada lección es un paso más hacia su meta. 💪";
-            break;
-    }
-
-    return `${header}${body}${footer}`;
-};
-
-const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, onUpdateProgress, isReadOnly, currentCourseName }) => {
+const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, onUpdateProgress, isReadOnly, currentCourseName, currentModuleName, currentModuleNumber, onSelectStudent }) => {
   const [editingCell, setEditingCell] = useState<{ studentId: number; courseIndex: number } | null>(null);
+
+  const generateWhatsAppMessage = (student: Student): string => {
+      const name = student.name.split(' ')[0]; // Use first name for a personal but formal touch
+      const totalPoints = student.totalPoints;
+      const expectedPoints = Math.round(student.expectedPoints);
+      const status = student.status;
+
+      let header = `Estimada ${name}, 👋 le comparto su reporte de avance en la certificación de TI.\n\n`;
+      let body = `*Puntaje Actual:* ${totalPoints} puntos\n*Puntaje Esperado:* ${expectedPoints} puntos\n*Estado:* ${status}\n\n`;
+      let footer = '';
+
+      switch (status) {
+          case Status.Finalizada:
+              footer = "¡EXTRAORDINARIO! 🥳 Ha completado la certificación. Su dedicación y esfuerzo han dado frutos. ¡Muchas felicidades por este gran logro! 🏆";
+              break;
+          case Status.EliteII:
+          case Status.EliteI:
+              footer = "¡IMPRESIONANTE! 🚀 Lleva un ritmo excepcional, superando todas las expectativas. Es un verdadero ejemplo para el grupo. ¡Siga así, va directo al éxito! 🔥";
+              break;
+          case Status.Avanzada:
+              footer = "¡EXCELENTE! ✨ Va por delante del calendario, ¡qué gran trabajo! Su proactividad la está llevando muy lejos. ¡Mantenga ese impulso! 💪";
+              break;
+          case Status.AlDia:
+              footer = "¡MUY BIEN! 👍 Va al día con el programa. Está demostrando constancia y disciplina. ¡Siga con ese buen ritmo para alcanzar su meta! 🎯";
+              break;
+          case Status.Atrasada:
+              const pointsToCatchUp = Math.max(1, Math.round(student.expectedPoints - student.totalPoints));
+              footer = `¡Ánimo! 💪 Para ponerse "Al Día" necesita sumar ${pointsToCatchUp} puntos. Actualmente, el avance esperado corresponde al *Módulo ${currentModuleNumber}: ${currentModuleName}* del curso *"${currentCourseName}"*. ¡Enfóquese en esa lección para avanzar! ¡No se rinda, cada paso cuenta! ✨`;
+              break;
+          case Status.Riesgo:
+              const pointsToCatchUpRisk = Math.max(1, Math.round(student.expectedPoints - student.totalPoints));
+              footer = `¡No se preocupe, estamos para apoyarle! 🙏 Para ponerse "Al Día" necesita sumar ${pointsToCatchUpRisk} puntos. El enfoque actual, según el cronograma, es el *Módulo ${currentModuleNumber}: ${currentModuleName}* del curso *"${currentCourseName}"*. Si necesita ayuda, no dude en contactarme. ¡Confío en que lo logrará! 🤝`;
+              break;
+          case Status.SinIniciar:
+              footer = "¡Es hora de empezar esta increíble aventura! 🚀 El primer paso es el más importante. Entre a la plataforma y complete su primera lección. ¡Estamos emocionados de ver su progreso! 😊";
+              break;
+          default:
+              footer = "¡Siga adelante con sus estudios! Cada lección es un paso más hacia su meta. 💪";
+              break;
+      }
+
+      return `${header}${body}${footer}`;
+  };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>, studentId: number, courseIndex: number) => {
     let newProgress = parseInt(e.target.value, 10);
@@ -79,6 +84,7 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, onUpdateP
           <tr>
             <th scope="col" className="w-16 text-center py-3.5 px-3 text-sm font-semibold text-gray-500">#</th>
             <th scope="col" className="py-3.5 px-3 text-left text-sm font-semibold text-gray-500">Nombre</th>
+            <th scope="col" className="w-16 text-center py-3.5 px-3 text-sm font-semibold text-gray-500"><span className="sr-only">Ver Perfil</span></th>
             <th scope="col" className="w-20 text-center py-3.5 px-3 text-sm font-semibold text-gray-500">Reporte</th>
             <th scope="col" className="py-3.5 px-3 text-left text-sm font-semibold text-gray-500">Estado</th>
             <th scope="col" className="w-48 py-3.5 px-3 text-left text-sm font-semibold text-gray-500">Progreso Total</th>
@@ -103,7 +109,17 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, onUpdateP
             <tr key={student.id} className="hover:bg-gray-50 transition-colors duration-200">
               <td className="whitespace-nowrap text-center py-4 px-3 text-lg font-bold text-gray-500">{index + 1}</td>
               <td className="whitespace-nowrap py-4 px-3 text-sm font-medium text-gray-900">
-                {student.name}
+                 {student.name}
+              </td>
+              <td className="whitespace-nowrap text-center py-4 px-3">
+                 <button 
+                    onClick={() => onSelectStudent(student.id)}
+                    title="Ver perfil detallado"
+                    className="text-gray-500 hover:text-sky-600 transition-colors"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8a2 2 0 0 1 0 2.8l-6 6-4-4-4 4"/></svg>
+                    <span className="sr-only">Ver perfil de {student.name}</span>
+                </button>
               </td>
               <td className="whitespace-nowrap text-center py-4 px-3">
                 {student.phone && (

@@ -10,6 +10,8 @@ import HelpView from './components/HelpView';
 import ToolsView from './components/ToolsView';
 import ProgressSummary from './components/ProgressSummary';
 import StatusSummary from './components/StatusSummary';
+import ScheduleView from './components/ScheduleView';
+import StudentProfileView from './components/StudentProfileView';
 
 const parseDateAsUTC = (dateString: string): Date => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
@@ -30,7 +32,7 @@ const getTodayInElSalvador = (): Date => {
 };
 
 
-export type ActiveView = 'monitor' | 'verification' | 'certificates' | 'help' | 'tools';
+export type ActiveView = 'monitor' | 'schedule' | 'verification' | 'certificates' | 'help' | 'tools';
 
 type SyncStatus = {
     time: Date | null;
@@ -108,6 +110,8 @@ const App: React.FC = () => {
     const [syncStatus, setSyncStatus] = useState<SyncStatus>({ status: 'idle', time: null });
     const [isDataLoading, setIsDataLoading] = useState(true);
     const [questions, setQuestions] = useState<CommunityQuestion[]>([]);
+    const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+    const [instructorNotes, setInstructorNotes] = useState<{ [studentId: number]: string }>({});
     
     const hasUnsavedChanges = useMemo(() => {
         return JSON.stringify(students) !== JSON.stringify(initialStudents);
@@ -160,6 +164,37 @@ const App: React.FC = () => {
       };
     }, [scheduleUpToToday]);
 
+    const processedSchedule = useMemo(() => {
+        const allUniqueDates = [...new Set(schedule.map(item => item.date))].sort((a,b) => parseDateAsUTC(a).getTime() - parseDateAsUTC(b).getTime());
+        const totalScheduledDays = allUniqueDates.length;
+        if (totalScheduledDays === 0) return [];
+
+        const pointsPerDay = TOTAL_MAX_POINTS / totalScheduledDays;
+        const dateToPointsMap = new Map<string, number>();
+        allUniqueDates.forEach((date, index) => {
+            dateToPointsMap.set(date, (index + 1) * pointsPerDay);
+        });
+        
+        const courseToModulesMap = new Map<string, string[]>();
+        COURSE_NAMES.forEach(courseName => {
+            const modules = [...new Set(schedule.filter(item => item.course === courseName).map(item => item.module))];
+            courseToModulesMap.set(courseName, modules);
+        });
+
+        const todayString = today.toISOString().split('T')[0];
+
+        return schedule.map(item => {
+            const modulesForCourse = courseToModulesMap.get(item.course) || [];
+            const moduleNumber = modulesForCourse.indexOf(item.module) + 1;
+            return {
+                ...item,
+                moduleNumber: moduleNumber > 0 ? moduleNumber : 1,
+                expectedPoints: dateToPointsMap.get(item.date) || 0,
+                isCurrentDay: item.date === todayString
+            }
+        });
+    }, [today]);
+
 
     const calculateStatus = useCallback((totalPoints: number, expectedPoints: number): Status => {
         // Finalizada and Sin Iniciar are absolute states
@@ -184,13 +219,114 @@ const App: React.FC = () => {
     }, []);
 
     const sortedStudents = useMemo(() => {
-        const updatedStudents = students.map(student => {
+        const studentsWithData = students.map(student => {
             const totalPoints = student.courseProgress.reduce((sum, p) => sum + p, 0);
             const status = calculateStatus(totalPoints, expectedPointsToday);
             return { ...student, totalPoints, status, expectedPoints: expectedPointsToday };
-        }).sort((a, b) => b.totalPoints - a.totalPoints);
-        return updatedStudents;
+        });
+
+        const sorted = [...studentsWithData].sort((a, b) => b.totalPoints - a.totalPoints);
+        
+        const rankedStudents = sorted.map((student, index) => {
+            const studentWithRank = { ...student };
+            delete studentWithRank.rankBadge;
+
+            if (student.totalPoints > 0) {
+                if (index < 3) {
+                    studentWithRank.rankBadge = 'Top 3';
+                } else if (index < 5) {
+                    studentWithRank.rankBadge = 'Top 5';
+                } else if (index < 10) {
+                    studentWithRank.rankBadge = 'Top 10';
+                }
+            }
+            return studentWithRank;
+        });
+
+        return rankedStudents;
     }, [students, expectedPointsToday, calculateStatus]);
+    
+    const selectedStudent = useMemo(() => {
+        return sortedStudents.find(s => s.id === selectedStudentId) || null;
+    }, [selectedStudentId, sortedStudents]);
+
+    const chartData = useMemo(() => {
+        if (!selectedStudent) return null;
+
+        const allUniqueDates = [...new Set(schedule.map(item => item.date))].sort((a,b) => parseDateAsUTC(a).getTime() - parseDateAsUTC(b).getTime());
+        const totalProgramDays = allUniqueDates.length;
+
+        const expectedSeries = allUniqueDates.map((_, index) => ({
+            day: index + 1,
+            points: ((index + 1) / totalProgramDays) * TOTAL_MAX_POINTS
+        }));
+
+        const courseDayMap = new Map<string, number[]>();
+        schedule.forEach(item => {
+            if (!courseDayMap.has(item.course)) {
+                courseDayMap.set(item.course, []);
+            }
+            const dateIndex = allUniqueDates.indexOf(item.date);
+            if (dateIndex !== -1) {
+                courseDayMap.get(item.course)!.push(dateIndex + 1);
+            }
+        });
+
+        const courseEndDays = COURSE_NAMES.map(courseName => {
+            const days = courseDayMap.get(courseName) || [0];
+            return Math.max(...days);
+        });
+
+        const studentProgressKeyframes = [{ day: 0, points: 0 }];
+        let cumulativePoints = 0;
+        selectedStudent.courseProgress.forEach((progress, index) => {
+            cumulativePoints += progress;
+            studentProgressKeyframes.push({
+                day: courseEndDays[index],
+                points: cumulativePoints
+            });
+        });
+
+        const todayUTC = today.getTime();
+        const datesUpToToday = allUniqueDates.filter(d => parseDateAsUTC(d).getTime() <= todayUTC);
+        const currentDayNumber = datesUpToToday.length;
+
+        const studentSeries = [];
+        // Loop from day 1 up to and including currentDayNumber
+        for (let day = 1; day <= currentDayNumber; day++) {
+            let startFrame = studentProgressKeyframes[0];
+            let endFrame = studentProgressKeyframes.length > 1 ? studentProgressKeyframes[1] : studentProgressKeyframes[0];
+
+            for (let i = 0; i < studentProgressKeyframes.length - 1; i++) {
+                if (day >= studentProgressKeyframes[i].day && day <= studentProgressKeyframes[i + 1].day) {
+                    startFrame = studentProgressKeyframes[i];
+                    endFrame = studentProgressKeyframes[i + 1];
+                    break;
+                }
+            }
+
+            if (day > studentProgressKeyframes[studentProgressKeyframes.length - 1].day) {
+                studentSeries.push({ day, points: cumulativePoints });
+                continue;
+            }
+            
+            const dayRange = endFrame.day - startFrame.day;
+            const pointRange = endFrame.points - startFrame.points;
+
+            if (dayRange === 0) {
+                studentSeries.push({ day, points: startFrame.points });
+            } else {
+                const progressInInterval = (day - startFrame.day) / dayRange;
+                const interpolatedPoints = startFrame.points + (progressInInterval * pointRange);
+                studentSeries.push({ day, points: interpolatedPoints });
+            }
+        }
+        // Always add the starting point {0, 0}
+        studentSeries.unshift({ day: 0, points: 0 });
+
+        return { expectedSeries, studentSeries, totalDays: totalProgramDays };
+    }, [selectedStudent, schedule, today]);
+
 
     const loadDataFromGoogleSheets = useCallback(async () => {
         setIsDataLoading(true);
@@ -252,6 +388,16 @@ const App: React.FC = () => {
         // Initial load
         loadDataFromGoogleSheets();
 
+        // Load notes from local storage
+        try {
+            const savedNotes = localStorage.getItem('instructorNotes');
+            if (savedNotes) {
+                setInstructorNotes(JSON.parse(savedNotes));
+            }
+        } catch (e) {
+            console.error("Failed to load instructor notes from localStorage", e);
+        }
+
         // Load non-student data from local storage
         try {
             const savedQuestions = localStorage.getItem('communityQuestions');
@@ -306,6 +452,12 @@ const App: React.FC = () => {
             }
             return s;
         }));
+    };
+    
+    const handleUpdateNote = (studentId: number, note: string) => {
+        const updatedNotes = { ...instructorNotes, [studentId]: note };
+        setInstructorNotes(updatedNotes);
+        localStorage.setItem('instructorNotes', JSON.stringify(updatedNotes));
     };
 
     const handleSave = async () => {
@@ -374,6 +526,9 @@ const App: React.FC = () => {
         localStorage.setItem('communityQuestions', JSON.stringify(updatedQuestions));
     };
     
+    const handleSelectStudent = (studentId: number) => setSelectedStudentId(studentId);
+    const handleClearSelectedStudent = () => setSelectedStudentId(null);
+    
     const renderActiveView = () => {
          if (isDataLoading) {
             return (
@@ -402,9 +557,14 @@ const App: React.FC = () => {
                             onUpdateProgress={handleUpdateProgress} 
                             isReadOnly={false}
                             currentCourseName={currentCourseName}
+                            currentModuleName={currentModuleName}
+                            currentModuleNumber={currentModuleNumber}
+                            onSelectStudent={handleSelectStudent}
                         />
                     </div>
                 );
+            case 'schedule':
+                return <ScheduleView schedule={processedSchedule} />;
             case 'verification':
                 return <VerificationView students={sortedStudents} onUpdateVerification={handleUpdateVerification} isReadOnly={false}/>;
             case 'certificates':
@@ -424,17 +584,37 @@ const App: React.FC = () => {
     };
 
     const viewsWithSave = ['monitor', 'verification', 'certificates'];
+    
+    if (selectedStudent && chartData) {
+        return (
+            <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pb-28">
+                <StudentProfileView
+                    student={selectedStudent}
+                    chartData={chartData}
+                    note={instructorNotes[selectedStudent.id] || ''}
+                    onUpdateNote={(note) => handleUpdateNote(selectedStudent.id, note)}
+                    onBack={handleClearSelectedStudent}
+                />
+            </main>
+        )
+    }
 
     return (
         <>
         <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pb-28">
-            {activeView === 'monitor' && (
+            {activeView === 'monitor' && !selectedStudent && (
                 <div className="mb-8 text-left">
                     <h1 className="text-4xl font-extrabold text-gray-900">Monitor de Avance <span className="text-sky-600 font-bold">Coursera TI</span></h1>
                     <p className="text-lg text-gray-500 mt-2">Registro de puntajes y estado de la certificación en tiempo real.</p>
                 </div>
             )}
-           {viewsWithSave.includes(activeView) && (
+            {activeView === 'schedule' && !selectedStudent && (
+                <div className="mb-8 text-left">
+                    <h1 className="text-4xl font-extrabold text-gray-900">Cronograma de Avance</h1>
+                    <p className="text-lg text-gray-500 mt-2">Consulta las fechas, módulos y el puntaje esperado para cada día del programa.</p>
+                </div>
+            )}
+           {viewsWithSave.includes(activeView) && !selectedStudent && (
                 <SaveChangesHeader 
                     syncStatus={syncStatus}
                     onSave={handleSave}

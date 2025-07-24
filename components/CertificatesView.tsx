@@ -20,7 +20,7 @@ const CertificatesView: React.FC<CertificatesViewProps> = ({ students, onUpdateC
             <p className="text-gray-500">Haz clic en el estado de un certificado para marcarlo como entregado o pendiente.</p>
           </div>
           <a
-            href="https://drive.google.com/drive/folders/18xkVPEYMjsZDAIutOVclhyMNdfwYhQb5"
+            href="https://drive.google.com/drive/folders/1FEXCIxMCTeg2XEcBvSgMuUQv5XlgQtX_?usp=drive_link"
             target="_blank"
             rel="noopener noreferrer"
             className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center gap-2 px-4 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors"

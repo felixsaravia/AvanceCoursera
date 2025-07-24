@@ -1,4 +1,5 @@
 
+
 export enum Status {
   Finalizada = 'Finalizada',
   EliteII = 'Elite II',
@@ -18,6 +19,7 @@ export interface Student {
   totalPoints: number;
   expectedPoints: number;
   status: Status;
+  rankBadge?: 'Top 3' | 'Top 5' | 'Top 10';
   identityVerified: boolean;
   twoFactorVerified: boolean;
   certificateStatus: boolean[];
