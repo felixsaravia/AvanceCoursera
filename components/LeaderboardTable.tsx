@@ -12,40 +12,40 @@ interface LeaderboardTableProps {
 }
 
 const generateWhatsAppMessage = (student: Student): string => {
-    const name = student.name.split(' ')[0]; // Use first name for a more personal touch
+    const name = student.name.split(' ')[0]; // Use first name for a personal but formal touch
     const totalPoints = student.totalPoints;
     const expectedPoints = Math.round(student.expectedPoints);
     const status = student.status;
 
-    let header = `¡Hola ${name}! 👋 Te comparto tu reporte de avance en la certificación de TI.\n\n`;
+    let header = `Estimada ${name}, 👋 le comparto su reporte de avance en la certificación de TI.\n\n`;
     let body = `*Puntaje Actual:* ${totalPoints} puntos\n*Puntaje Esperado:* ${expectedPoints} puntos\n*Estado:* ${status}\n\n`;
     let footer = '';
 
     switch (status) {
         case Status.Finalizada:
-            footer = "¡EXTRAORDINARIO! 🥳 Has completado la certificación. Tu dedicación y esfuerzo han dado frutos. ¡Muchas felicidades por este gran logro! 🏆";
+            footer = "¡EXTRAORDINARIO! 🥳 Ha completado la certificación. Su dedicación y esfuerzo han dado frutos. ¡Muchas felicidades por este gran logro! 🏆";
             break;
         case Status.EliteII:
         case Status.EliteI:
-            footer = "¡IMPRESIONANTE! 🚀 Vas a un ritmo excepcional, superando todas las expectativas. Eres un verdadero ejemplo para el grupo. ¡Sigue así, vas directo al éxito! 🔥";
+            footer = "¡IMPRESIONANTE! 🚀 Lleva un ritmo excepcional, superando todas las expectativas. Es un verdadero ejemplo para el grupo. ¡Siga así, va directo al éxito! 🔥";
             break;
         case Status.Avanzada:
-            footer = "¡EXCELENTE! ✨ Vas por delante del calendario, ¡qué gran trabajo! Tu proactividad te está llevando muy lejos. ¡Mantén ese impulso! 💪";
+            footer = "¡EXCELENTE! ✨ Va por delante del calendario, ¡qué gran trabajo! Su proactividad la está llevando muy lejos. ¡Mantenga ese impulso! 💪";
             break;
         case Status.AlDia:
-            footer = "¡MUY BIEN! 👍 Vas al día con el programa. Estás demostrando constancia y disciplina. ¡Sigue con ese buen ritmo para alcanzar tu meta! 🎯";
+            footer = "¡MUY BIEN! 👍 Va al día con el programa. Está demostrando constancia y disciplina. ¡Siga con ese buen ritmo para alcanzar su meta! 🎯";
             break;
         case Status.Atrasada:
-            footer = "¡Ánimo! 💪 Sabemos que puedes ponerte al día. Organiza tu tiempo, enfócate en el próximo módulo y verás cómo avanzas. ¡No te rindas, cada paso cuenta! ✨";
+            footer = "¡Ánimo! 💪 Sabemos que puede ponerse al día. Organice su tiempo, enfóquese en el próximo módulo y verá cómo avanza. ¡No se rinda, cada paso cuenta! ✨";
             break;
         case Status.Riesgo:
-            footer = "¡No te preocupes, estamos para apoyarte! 🙏 Es momento de redoblar esfuerzos y enfocarse. Recuerda por qué empezaste este camino. Si necesitas ayuda, no dudes en contactarme. ¡Confío en que lo lograrás! 🤝";
+            footer = "¡No se preocupe, estamos para apoyarla! 🙏 Es momento de redoblar esfuerzos y enfocarse. Recuerde por qué empezó este camino. Si necesita ayuda, no dude en contactarme. ¡Confío en que lo logrará! 🤝";
             break;
         case Status.SinIniciar:
-            footer = "¡Es hora de empezar esta increíble aventura! 🚀 El primer paso es el más importante. Entra a la plataforma y completa tu primera lección. ¡Estamos emocionados de ver tu progreso! 😊";
+            footer = "¡Es hora de empezar esta increíble aventura! 🚀 El primer paso es el más importante. Entre a la plataforma y complete su primera lección. ¡Estamos emocionados de ver su progreso! 😊";
             break;
         default:
-            footer = "¡Sigue adelante con tus estudios! Cada lección es un paso más hacia tu meta. 💪";
+            footer = "¡Siga adelante con sus estudios! Cada lección es un paso más hacia su meta. 💪";
             break;
     }
 
