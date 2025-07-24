@@ -13,6 +13,28 @@
       body {
         font-family: 'Inter', sans-serif;
       }
+      /* Custom scrollbar for better visibility on all OS */
+      .custom-scrollbar::-webkit-scrollbar {
+        height: 12px;
+        width: 12px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f5f9; /* Tailwind gray-100 */
+        border-radius: 10px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #94a3b8; /* Tailwind gray-400 */
+        border-radius: 10px;
+        border: 3px solid #f1f5f9; /* Tailwind gray-100 */
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #64748b; /* Tailwind gray-500 */
+      }
+      /* For Firefox */
+      .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: #94a3b8 #f1f5f9;
+      }
     </style>
   <script type="importmap">
 {
@@ -26,7 +48,7 @@
 </script>
 <link rel="stylesheet" href="/index.css">
 </head>
-  <body class="bg-gray-100 text-gray-800">
+  <body class="bg-gray-100 text-gray-800 pb-28">
     <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>

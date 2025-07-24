@@ -13,6 +13,7 @@ export enum Status {
 export interface Student {
   id: number;
   name: string;
+  phone?: string;
   courseProgress: number[]; // Array of 5 numbers for each course (0-100)
   totalPoints: number;
   expectedPoints: number;

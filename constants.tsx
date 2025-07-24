@@ -24,6 +24,29 @@ export const MOCK_NAMES: string[] = [
     "Gabriela Alexandra Alvayeros Guirola"
 ];
 
+export const STUDENT_PHONE_NUMBERS: { [key: string]: string } = {
+    "Alisson Berenice Guerrero Barrera": "50376898434",
+    "Nuria Lisseth Rivera Mestizo": "50361498403",
+    "Kateryn Estefany Zelada Galicia": "50378138537",
+    "Laura Rocío Perdomo Ramírez": "50376078615",
+    "Karla Michelle González González": "50372798620",
+    "Tania Abigail Barahona Fuentes": "50361510451",
+    "Tanya Gabriela González Ramírez": "50370693012",
+    "Katherine Alexandra Hernández Suriano": "50360410587",
+    "Isabella Gavidia Molina": "50378628033",
+    "Marlene Lizbeth Guevara Tobar": "50372800519",
+    "Katherine Elena Hernandez Quintanilla": "50371261539",
+    "Fatima Beatriz Masin Aguilar": "50376503426",
+    "Adriana Marcela Chacón Reyes": "50372373855",
+    "Emeli Lisvea Navarrete Flores": "50374423179",
+    "María Fernanda Martínez Cupido": "50379143566",
+    "Ana Milena Cortez Linares": "50378468848",
+    "María José Peraza Peña": "50376527140",
+    "Rebeca Michelle Castro Pineda": "50371981227",
+    "Alejandra Lisbeth Zavala Calles": "50375417276",
+    "Gabriela Alexandra Alvayeros Guirola": "50370464925"
+};
+
 
 export const TOTAL_COURSES = 6;
 export const MAX_POINTS_PER_COURSE = 100;
