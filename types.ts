@@ -11,6 +11,12 @@ export enum Status {
   SinIniciar = 'Sin Iniciar',
 }
 
+export interface LastModification {
+  timestamp: string; // ISO string
+  previousTotalPoints: number;
+  newTotalPoints: number;
+}
+
 export interface Student {
   id: number;
   name: string;
@@ -25,6 +31,7 @@ export interface Student {
   certificateStatus: boolean[];
   finalCertificateStatus: boolean;
   dtvStatus: boolean;
+  lastModification?: LastModification; // Object format
 }
 
 export interface Answer {

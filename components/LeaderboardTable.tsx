@@ -6,6 +6,7 @@ import { TOTAL_MAX_POINTS, MAX_POINTS_PER_COURSE, COURSE_NAMES, COURSE_SHORT_NAM
 
 interface LeaderboardTableProps {
   students: Student[];
+  initialStudents: Student[];
   onUpdateProgress: (studentId: number, courseIndex: number, newProgress: number) => void;
   isReadOnly: boolean;
   currentCourseName: string;
@@ -14,7 +15,7 @@ interface LeaderboardTableProps {
   onSelectStudent: (studentId: number) => void;
 }
 
-const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, onUpdateProgress, isReadOnly, currentCourseName, currentModuleName, currentModuleNumber, onSelectStudent }) => {
+const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, initialStudents, onUpdateProgress, isReadOnly, currentCourseName, currentModuleName, currentModuleNumber, onSelectStudent }) => {
   const [editingCell, setEditingCell] = useState<{ studentId: number; courseIndex: number } | null>(null);
 
   const generateWhatsAppMessage = (student: Student): string => {
@@ -105,7 +106,9 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, onUpdateP
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200 bg-white">
-          {students.map((student, index) => (
+          {students.map((student, index) => {
+            const originalStudent = initialStudents.find(s => s.id === student.id);
+            return (
             <tr key={student.id} className="hover:bg-gray-50 transition-colors duration-200">
               <td className="whitespace-nowrap text-center py-4 px-3 text-lg font-bold text-gray-500">{index + 1}</td>
               <td className="whitespace-nowrap py-4 px-3 text-sm font-medium text-gray-900">
@@ -139,12 +142,15 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, onUpdateP
               {student.courseProgress.map((progress, i) => {
                 const isEditing = editingCell?.studentId === student.id && editingCell?.courseIndex === i;
                 const isCurrentCourse = COURSE_NAMES[i] === currentCourseName;
+                const isModified = originalStudent && originalStudent.courseProgress[i] !== progress;
+
                 return (
                   <td
                     key={i}
-                    className={`whitespace-nowrap text-center py-2 px-1 text-sm text-gray-600 transition-colors ${isCurrentCourse ? 'bg-sky-50' : ''}`}
+                    className={`relative whitespace-nowrap text-center py-2 px-1 text-sm text-gray-600 transition-colors ${isCurrentCourse ? 'bg-sky-50' : ''}`}
                     onClick={() => !isReadOnly && !isEditing && setEditingCell({ studentId: student.id, courseIndex: i })}
                   >
+                     {isModified && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-yellow-400 rounded-full" title="Valor modificado"></span>}
                     {isEditing ? (
                       <input
                         type="number"
@@ -170,7 +176,8 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, onUpdateP
               <td className="whitespace-nowrap text-center py-4 px-3 text-sm font-semibold text-sky-600">{student.totalPoints}</td>
               <td className="whitespace-nowrap text-center py-4 px-3 text-sm text-gray-500">{Math.round(student.expectedPoints)}</td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>

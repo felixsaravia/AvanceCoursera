@@ -64,7 +64,6 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, chartD
         knowledgeMaster: student.totalPoints === TOTAL_MAX_POINTS
     };
 
-
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -188,6 +187,41 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, chartD
                             className="w-full h-32 bg-gray-50 border-gray-200 rounded-md p-3 text-gray-900 focus:ring-2 focus:ring-sky-500 focus:outline-none transition-colors"
                         />
                         <p className="text-xs text-gray-400 mt-2">Los cambios se guardan automáticamente.</p>
+                    </InfoCard>
+
+                    <InfoCard title="Bitácora de Cambios">
+                        {student.lastModification ? (
+                            <div className="space-y-3">
+                                <div className="flex items-start gap-3 text-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 flex-shrink-0 mt-0.5"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+                                    <div>
+                                        <p className="text-gray-500 font-medium">Fecha de actualización:</p>
+                                        <p className="text-gray-800 font-semibold">
+                                            {new Intl.DateTimeFormat('es-ES', { dateStyle: 'long', timeStyle: 'short' }).format(new Date(student.lastModification.timestamp))}
+                                        </p>
+                                    </div>
+                                </div>
+                                 <div className="flex items-start gap-3 text-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 flex-shrink-0 mt-0.5"><path d="M7 20V4m0 16-3-3m3 3 3-3"/><path d="M17 4v16m0-16 3 3m-3-3-3 3"/></svg>
+                                    <div>
+                                        <p className="text-gray-500 font-medium">Cambio de puntaje:</p>
+                                        <div className="flex items-center gap-2 font-semibold">
+                                            <span className="text-gray-600">{student.lastModification.previousTotalPoints} pts</span>
+                                            <span className="text-sky-600">→</span>
+                                            <span className="text-gray-800">{student.lastModification.newTotalPoints} pts</span>
+                                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${student.lastModification.newTotalPoints >= student.lastModification.previousTotalPoints ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                               {student.lastModification.newTotalPoints >= student.lastModification.previousTotalPoints ? '+' : ''}{student.lastModification.newTotalPoints - student.lastModification.previousTotalPoints}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-4 text-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 flex-shrink-0"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+                                <p className="text-gray-500 font-medium">Aún no se han registrado modificaciones.</p>
+                            </div>
+                        )}
                     </InfoCard>
                 </div>
             </div>

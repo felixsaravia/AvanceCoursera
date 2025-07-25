@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Student, Status, CommunityQuestion, Answer, ScheduleItem, Break } from './types';
+import { Student, Status, CommunityQuestion, Answer, ScheduleItem, Break, LastModification } from './types';
 import { MOCK_NAMES, TOTAL_COURSES, MAX_POINTS_PER_COURSE, TOTAL_MAX_POINTS, STATUS_CONFIG, schedule, orderedStatuses, COURSE_NAMES, STUDENT_PHONE_NUMBERS } from './constants';
 import LeaderboardTable from './components/LeaderboardTable';
 import AIAnalyzer from './components/AIAnalyzer';
@@ -372,11 +372,26 @@ const App: React.FC = () => {
 
     const handleUpdateProgress = (studentId: number, courseIndex: number, newProgress: number) => {
         setStudents(prev =>
-            prev.map(s =>
-                s.id === studentId
-                    ? { ...s, courseProgress: s.courseProgress.map((p, i) => i === courseIndex ? newProgress : p) }
-                    : s
-            )
+            prev.map(s => {
+                if (s.id === studentId) {
+                    const previousTotalPoints = s.courseProgress.reduce((sum, p) => sum + p, 0);
+                    const newCourseProgress = s.courseProgress.map((p, i) => i === courseIndex ? newProgress : p);
+                    const newTotalPoints = newCourseProgress.reduce((sum, p) => sum + p, 0);
+
+                    const lastModification: LastModification = {
+                        timestamp: new Date().toISOString(),
+                        previousTotalPoints,
+                        newTotalPoints,
+                    };
+
+                    return { 
+                        ...s, 
+                        courseProgress: newCourseProgress,
+                        lastModification: lastModification
+                    };
+                }
+                return s;
+            })
         );
     };
 
@@ -510,6 +525,7 @@ const App: React.FC = () => {
                          <StatusSummary students={sortedStudents} />
                         <LeaderboardTable 
                             students={sortedStudents} 
+                            initialStudents={initialStudents}
                             onUpdateProgress={handleUpdateProgress} 
                             isReadOnly={false}
                             currentCourseName={currentCourseName}
