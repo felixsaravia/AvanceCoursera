@@ -30,7 +30,7 @@ const MotivationalBoostGenerator: React.FC = () => {
 
         if (situation) {
             prompt = `
-                Eres un coach motivacional y un experto en el campo de Soporte de TI. Tu audiencia son estudiantes que se preparan para la certificación de Google Coursera.
+                Eres un coach motivacional y un experto en el campo de Soporte de TI. Tu audiencia son estudiantes que se preparan para la certificación de Soporte de TI de Google.
 
                 Un estudiante se enfrenta a la siguiente situación: "${situation}".
 
@@ -40,7 +40,7 @@ const MotivationalBoostGenerator: React.FC = () => {
             `;
         } else {
              prompt = `
-                Eres un coach motivacional y un experto en el campo de Soporte de TI. Tu audiencia son estudiantes que se preparan para la certificación de Google Coursera.
+                Eres un coach motivacional y un experto en el campo de Soporte de TI. Tu audiencia son estudiantes que se preparan para la certificación de Soporte de TI de Google.
                 Genera un mensaje de motivación corto (1-3 frases), poderoso e inspirador en español. El mensaje debe ser alentador y relevante para alguien que estudia tecnología, redes, ciberseguridad o sistemas operativos.
                 Evita clichés genéricos. Conecta la motivación con el esfuerzo, la perseverancia y las recompensas de una carrera en TI.
 

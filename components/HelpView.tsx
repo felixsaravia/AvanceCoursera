@@ -118,7 +118,7 @@ const HelpView: React.FC<HelpViewProps> = ({ questions, onAskQuestion, onAddAnsw
                     <iframe 
                         className="w-full h-full rounded-lg" 
                         src="https://www.youtube.com/embed/DZq0-TUd2MQ" 
-                        title="Video de Inducción de Coursera" 
+                        title="Video de Inducción de Google IT Support" 
                         frameBorder="0" 
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
                         allowFullScreen>

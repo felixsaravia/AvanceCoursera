@@ -255,75 +255,32 @@ const App: React.FC = () => {
 
         const allUniqueDates = [...new Set(schedule.map(item => item.date))].sort((a,b) => parseDateAsUTC(a).getTime() - parseDateAsUTC(b).getTime());
         const totalProgramDays = allUniqueDates.length;
+        if (totalProgramDays === 0) return null;
 
-        const expectedSeries = allUniqueDates.map((_, index) => ({
+        // Expected series is a line from (day 0, 0 points) to (totalDays, max points)
+        const expectedSeries = [{day: 0, points: 0}].concat(allUniqueDates.map((_, index) => ({
             day: index + 1,
             points: ((index + 1) / totalProgramDays) * TOTAL_MAX_POINTS
-        }));
+        })));
 
-        const courseDayMap = new Map<string, number[]>();
-        schedule.forEach(item => {
-            if (!courseDayMap.has(item.course)) {
-                courseDayMap.set(item.course, []);
-            }
-            const dateIndex = allUniqueDates.indexOf(item.date);
-            if (dateIndex !== -1) {
-                courseDayMap.get(item.course)!.push(dateIndex + 1);
-            }
-        });
-
-        const courseEndDays = COURSE_NAMES.map(courseName => {
-            const days = courseDayMap.get(courseName) || [0];
-            return Math.max(...days);
-        });
-
-        const studentProgressKeyframes = [{ day: 0, points: 0 }];
-        let cumulativePoints = 0;
-        selectedStudent.courseProgress.forEach((progress, index) => {
-            cumulativePoints += progress;
-            studentProgressKeyframes.push({
-                day: courseEndDays[index],
-                points: cumulativePoints
-            });
-        });
-
+        // Get current day number
         const todayUTC = today.getTime();
         const datesUpToToday = allUniqueDates.filter(d => parseDateAsUTC(d).getTime() <= todayUTC);
         const currentDayNumber = datesUpToToday.length;
-
-        const studentSeries = [];
-        // Loop from day 1 up to and including currentDayNumber
-        for (let day = 1; day <= currentDayNumber; day++) {
-            let startFrame = studentProgressKeyframes[0];
-            let endFrame = studentProgressKeyframes.length > 1 ? studentProgressKeyframes[1] : studentProgressKeyframes[0];
-
-            for (let i = 0; i < studentProgressKeyframes.length - 1; i++) {
-                if (day >= studentProgressKeyframes[i].day && day <= studentProgressKeyframes[i + 1].day) {
-                    startFrame = studentProgressKeyframes[i];
-                    endFrame = studentProgressKeyframes[i + 1];
-                    break;
-                }
-            }
-
-            if (day > studentProgressKeyframes[studentProgressKeyframes.length - 1].day) {
-                studentSeries.push({ day, points: cumulativePoints });
-                continue;
-            }
-            
-            const dayRange = endFrame.day - startFrame.day;
-            const pointRange = endFrame.points - startFrame.points;
-
-            if (dayRange === 0) {
-                studentSeries.push({ day, points: startFrame.points });
-            } else {
-                const progressInInterval = (day - startFrame.day) / dayRange;
-                const interpolatedPoints = startFrame.points + (progressInInterval * pointRange);
-                studentSeries.push({ day, points: interpolatedPoints });
+        
+        // Student series models a linear progression up to the current day.
+        // The student's line is calculated based on their progress rate (total points / days passed).
+        // This ensures it correctly reflects their performance relative to the expected linear progress.
+        const studentSeries = [{ day: 0, points: 0 }];
+        if (currentDayNumber > 0) {
+            const studentTotalPoints = selectedStudent.totalPoints;
+            const studentRate = studentTotalPoints / currentDayNumber;
+            for (let day = 1; day <= currentDayNumber; day++) {
+                // The points at any given day is that day times their rate.
+                studentSeries.push({ day, points: day * studentRate });
             }
         }
-        // Always add the starting point {0, 0}
-        studentSeries.unshift({ day: 0, points: 0 });
-
+        
         return { expectedSeries, studentSeries, totalDays: totalProgramDays };
     }, [selectedStudent, schedule, today]);
 
@@ -586,6 +543,7 @@ const App: React.FC = () => {
     const viewsWithSave = ['monitor', 'verification', 'certificates'];
     
     if (selectedStudent && chartData) {
+        const isFirstPlace = selectedStudent?.id === sortedStudents[0]?.id && sortedStudents.length > 0 && sortedStudents[0].totalPoints > 0;
         return (
             <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pb-28">
                 <StudentProfileView
@@ -594,6 +552,7 @@ const App: React.FC = () => {
                     note={instructorNotes[selectedStudent.id] || ''}
                     onUpdateNote={(note) => handleUpdateNote(selectedStudent.id, note)}
                     onBack={handleClearSelectedStudent}
+                    isFirstPlace={isFirstPlace}
                 />
             </main>
         )
@@ -604,7 +563,7 @@ const App: React.FC = () => {
         <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pb-28">
             {activeView === 'monitor' && !selectedStudent && (
                 <div className="mb-8 text-left">
-                    <h1 className="text-4xl font-extrabold text-gray-900">Monitor de Avance <span className="text-sky-600 font-bold">Coursera TI</span></h1>
+                    <h1 className="text-4xl font-extrabold text-gray-900">Monitor de Avance <span className="text-sky-600 font-bold">Google IT Support</span></h1>
                     <p className="text-lg text-gray-500 mt-2">Registro de puntajes y estado de la certificación en tiempo real.</p>
                 </div>
             )}

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import PomodoroTimer from './tools/PomodoroTimer';
 import AIQuickQuestion from './tools/AIQuickQuestion';
-import AIImageQuery from './tools/AIImageQuery';
 import CreativeIdeaGenerator from './tools/CreativeIdeaGenerator';
+import AIInterviewSimulator from './tools/AIInterviewSimulator';
 
-type Tool = 'pomodoro' | 'ai-question' | 'ai-image' | 'creative-idea' | null;
+type Tool = 'pomodoro' | 'ai-question' | 'creative-idea' | 'ai-interview-simulator' | null;
 
 const ToolCard = ({ icon, title, description, onClick, disabled = false }) => (
     <button
@@ -31,10 +31,10 @@ const ToolsView: React.FC = () => {
                 return <PomodoroTimer />;
             case 'ai-question':
                 return <AIQuickQuestion />;
-            case 'ai-image':
-                return <AIImageQuery />;
             case 'creative-idea':
                 return <CreativeIdeaGenerator />;
+            case 'ai-interview-simulator':
+                return <AIInterviewSimulator />;
             default:
                 return null;
         }
@@ -55,16 +55,16 @@ const ToolsView: React.FC = () => {
                 description="Haz una pregunta rápida a la IA y obtén una respuesta al instante."
             />
             <ToolCard
-                onClick={() => setActiveTool('ai-image')}
-                icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>}
-                title="Análisis de Imagen con IA"
-                description="Toma una foto y pregunta a la IA sobre ella. Ideal para hardware."
-            />
-            <ToolCard
                 onClick={() => setActiveTool('creative-idea')}
                 icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>}
                 title="Impulso Motivacional"
                 description="Recibe una dosis de ánimo para seguir adelante con tus estudios."
+            />
+            <ToolCard
+                onClick={() => setActiveTool('ai-interview-simulator')}
+                icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="12" cy="10" r="2"/><path d="M8 14c0-2 2-3 4-3s4 1 4 3"/></svg>}
+                title="Simulador de Entrevistas"
+                description="Practica para entrevistas de soporte de TI y recibe feedback de la IA."
             />
         </div>
     );
