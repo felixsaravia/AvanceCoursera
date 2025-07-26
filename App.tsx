@@ -197,38 +197,120 @@ const App: React.FC = () => {
 
 
     const calculateStatus = useCallback((totalPoints: number, expectedPoints: number): Status => {
-        // Finalizada and Sin Iniciar are absolute states
         if (totalPoints === TOTAL_MAX_POINTS) return Status.Finalizada;
         if (totalPoints === 0) return Status.SinIniciar;
     
         const difference = totalPoints - expectedPoints;
     
-        // Status logic based on user's request:
-        // > 150 points above expected is Elite II
         if (difference > 150) return Status.EliteII;
-        // > 100 points above expected is Elite I
         if (difference > 100) return Status.EliteI;
-        // any score above expected is Avanzada ("Adelantada")
         if (difference > 0) return Status.Avanzada;
-        // Between expected and 25 points below is "Al Día"
         if (difference >= -25) return Status.AlDia;
-        // 75 or more points below expected is "En Riesgo"
         if (difference < -75) return Status.Riesgo;
-        // Anything else below expected is "Atrasada"
         return Status.Atrasada;
     }, []);
 
-    const sortedStudents = useMemo(() => {
-        const studentsWithData = students.map(student => {
-            const totalPoints = student.courseProgress.reduce((sum, p) => sum + p, 0);
-            const status = calculateStatus(totalPoints, expectedPointsToday);
-            return { ...student, totalPoints, status, expectedPoints: expectedPointsToday };
-        });
+    const processStudentData = useCallback((studentsToProcess: any[]): Student[] => {
+      return studentsToProcess.map((s, index) => {
+          const courseProgress = s.courseProgress || Array(TOTAL_COURSES).fill(0);
+          const totalPoints = courseProgress.reduce((sum, p) => sum + p, 0);
+          const expectedPoints = expectedPointsToday;
+          const status = calculateStatus(totalPoints, expectedPoints);
 
-        const sorted = [...studentsWithData].sort((a, b) => b.totalPoints - a.totalPoints);
+          const student: Student = {
+              id: s.id ?? index + 1,
+              name: s.name,
+              phone: STUDENT_PHONE_NUMBERS[s.name] || undefined,
+              courseProgress,
+              totalPoints,
+              expectedPoints,
+              status,
+              identityVerified: s.identityVerified ?? false,
+              twoFactorVerified: s.twoFactorVerified ?? false,
+              certificateStatus: s.certificateStatus || Array(TOTAL_COURSES).fill(false),
+              finalCertificateStatus: s.finalCertificateStatus ?? false,
+              dtvStatus: s.dtvStatus ?? false,
+              lastModification: s.lastModification,
+          };
+          return student;
+      });
+    }, [expectedPointsToday, calculateStatus]);
+
+    const handleSave = async () => {
+        setSyncStatus({ status: 'syncing', time: null });
+    
+        const studentsToSave = students.map(currentStudent => {
+            const initialStudent = initialStudents.find(s => s.id === currentStudent.id);
+    
+            // Re-calculate all derived data to ensure consistency.
+            const totalPoints = currentStudent.courseProgress.reduce((sum, p) => sum + p, 0);
+            const status = calculateStatus(totalPoints, currentStudent.expectedPoints);
+    
+            // This is the bulletproof fix:
+            // If the current student was modified, it will have a new `lastModification` object.
+            // If it was NOT modified, its `lastModification` from the state might be missing.
+            // In that case, we MUST fall back to the `initialStudent`'s data, which is our clean backup.
+            // This prevents sending `undefined` and causing the script to erase the cell.
+            const finalLastModification = currentStudent.lastModification || initialStudent?.lastModification;
+    
+            // Build a clean object with all required fields to send to the script.
+            // This prevents any extra properties from the UI state from being sent.
+            return {
+                id: currentStudent.id,
+                name: currentStudent.name,
+                phone: currentStudent.phone,
+                courseProgress: currentStudent.courseProgress,
+                identityVerified: currentStudent.identityVerified,
+                twoFactorVerified: currentStudent.twoFactorVerified,
+                certificateStatus: currentStudent.certificateStatus,
+                finalCertificateStatus: currentStudent.finalCertificateStatus,
+                dtvStatus: currentStudent.dtvStatus,
+                // These are the fields the Google Script expects.
+                totalPoints: totalPoints,
+                expectedPoints: currentStudent.expectedPoints,
+                status: status,
+                lastModification: finalLastModification,
+            };
+        });
+    
+        try {
+            localStorage.setItem('studentData', JSON.stringify(students));
+    
+            const formData = new URLSearchParams();
+            formData.append('payload', JSON.stringify(studentsToSave));
+    
+            const response = await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                body: formData,
+            });
+    
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Error del servidor: ${errorText}`);
+            }
+    
+            const result = await response.json();
+            if (result.status !== 'success') {
+                throw new Error(result.message || 'Error desconocido al guardar en Google Sheets');
+            }
+    
+            const processedSavedData = processStudentData(studentsToSave);
+            setStudents(processedSavedData);
+            setInitialStudents(processedSavedData);
+            setSyncStatus({ status: 'success', time: new Date() });
+    
+        } catch (e) {
+            console.error("Failed to save data:", e);
+            const errorMessage = e instanceof Error ? e.message : "Error de red o del servidor.";
+            setSyncStatus({ status: 'error', time: new Date(), message: `Guardado local, pero falló la sincronización: ${errorMessage}` });
+        }
+    };
+
+    const sortedStudents = useMemo(() => {
+        const sorted = [...students].sort((a, b) => b.totalPoints - a.totalPoints);
         
         const rankedStudents = sorted.map((student, index) => {
-            const studentWithRank = { ...student };
+            const studentWithRank: Student = { ...student };
             delete studentWithRank.rankBadge;
 
             if (student.totalPoints > 0) {
@@ -244,7 +326,7 @@ const App: React.FC = () => {
         });
 
         return rankedStudents;
-    }, [students, expectedPointsToday, calculateStatus]);
+    }, [students]);
     
     const selectedStudent = useMemo(() => {
         return sortedStudents.find(s => s.id === selectedStudentId) || null;
@@ -257,26 +339,20 @@ const App: React.FC = () => {
         const totalProgramDays = allUniqueDates.length;
         if (totalProgramDays === 0) return null;
 
-        // Expected series is a line from (day 0, 0 points) to (totalDays, max points)
         const expectedSeries = [{day: 0, points: 0}].concat(allUniqueDates.map((_, index) => ({
             day: index + 1,
             points: ((index + 1) / totalProgramDays) * TOTAL_MAX_POINTS
         })));
 
-        // Get current day number
         const todayUTC = today.getTime();
         const datesUpToToday = allUniqueDates.filter(d => parseDateAsUTC(d).getTime() <= todayUTC);
         const currentDayNumber = datesUpToToday.length;
         
-        // Student series models a linear progression up to the current day.
-        // The student's line is calculated based on their progress rate (total points / days passed).
-        // This ensures it correctly reflects their performance relative to the expected linear progress.
         const studentSeries = [{ day: 0, points: 0 }];
         if (currentDayNumber > 0) {
             const studentTotalPoints = selectedStudent.totalPoints;
             const studentRate = studentTotalPoints / currentDayNumber;
             for (let day = 1; day <= currentDayNumber; day++) {
-                // The points at any given day is that day times their rate.
                 studentSeries.push({ day, points: day * studentRate });
             }
         }
@@ -288,13 +364,6 @@ const App: React.FC = () => {
     const loadDataFromGoogleSheets = useCallback(async () => {
         setIsDataLoading(true);
         setSyncStatus({ status: 'syncing', message: 'Cargando datos...', time: null });
-
-        const enrichStudentsWithPhones = (studentsToEnrich: any[]): Student[] => {
-            return studentsToEnrich.map(s => ({
-                ...s,
-                phone: STUDENT_PHONE_NUMBERS[s.name] || undefined
-            }));
-        };
 
         try {
             const response = await fetch(GOOGLE_SCRIPT_URL);
@@ -310,10 +379,10 @@ const App: React.FC = () => {
                     : null;
 
              if (fetchedStudentsRaw !== null) {
-                const enrichedStudents = enrichStudentsWithPhones(fetchedStudentsRaw);
-                setStudents(enrichedStudents);
-                setInitialStudents(enrichedStudents);
-                localStorage.setItem('studentData', JSON.stringify(enrichedStudents));
+                const processedData = processStudentData(fetchedStudentsRaw);
+                setStudents(processedData);
+                setInitialStudents(processedData);
+                localStorage.setItem('studentData', JSON.stringify(processedData));
                 setSyncStatus({ status: 'success', time: new Date() });
             } else {
                  throw new Error("Formato de datos inválido desde Google Sheets");
@@ -322,15 +391,14 @@ const App: React.FC = () => {
         } catch (error) {
             console.error("Error al cargar desde Google Sheets, usando datos locales:", error);
             setSyncStatus({ status: 'error', time: new Date(), message: 'Error de red, usando datos locales.' });
-            // Fallback to local storage if network fails
             const savedData = localStorage.getItem('studentData');
             if (savedData) {
                 try {
                     const parsedData = JSON.parse(savedData);
                     if (Array.isArray(parsedData)) {
-                        const enrichedStudents = enrichStudentsWithPhones(parsedData);
-                        setStudents(enrichedStudents);
-                        setInitialStudents(enrichedStudents);
+                        const processedData = processStudentData(parsedData);
+                        setStudents(processedData);
+                        setInitialStudents(processedData);
                     }
                 } catch (e) {
                     console.error("Error parsing data from local storage", e);
@@ -339,13 +407,11 @@ const App: React.FC = () => {
         } finally {
             setIsDataLoading(false);
         }
-    }, []);
+    }, [processStudentData]);
     
     useEffect(() => {
-        // Initial load
         loadDataFromGoogleSheets();
 
-        // Load notes from local storage
         try {
             const savedNotes = localStorage.getItem('instructorNotes');
             if (savedNotes) {
@@ -355,7 +421,6 @@ const App: React.FC = () => {
             console.error("Failed to load instructor notes from localStorage", e);
         }
 
-        // Load non-student data from local storage
         try {
             const savedQuestions = localStorage.getItem('communityQuestions');
             if(savedQuestions) {
@@ -374,9 +439,12 @@ const App: React.FC = () => {
         setStudents(prev =>
             prev.map(s => {
                 if (s.id === studentId) {
-                    const previousTotalPoints = s.courseProgress.reduce((sum, p) => sum + p, 0);
-                    const newCourseProgress = s.courseProgress.map((p, i) => i === courseIndex ? newProgress : p);
+                    const previousTotalPoints = s.totalPoints;
+                    const newCourseProgress = [...s.courseProgress];
+                    newCourseProgress[courseIndex] = newProgress;
+                    
                     const newTotalPoints = newCourseProgress.reduce((sum, p) => sum + p, 0);
+                    const newStatus = calculateStatus(newTotalPoints, s.expectedPoints);
 
                     const lastModification: LastModification = {
                         timestamp: new Date().toISOString(),
@@ -387,6 +455,8 @@ const App: React.FC = () => {
                     return { 
                         ...s, 
                         courseProgress: newCourseProgress,
+                        totalPoints: newTotalPoints,
+                        status: newStatus,
                         lastModification: lastModification
                     };
                 }
@@ -430,42 +500,6 @@ const App: React.FC = () => {
         const updatedNotes = { ...instructorNotes, [studentId]: note };
         setInstructorNotes(updatedNotes);
         localStorage.setItem('instructorNotes', JSON.stringify(updatedNotes));
-    };
-
-    const handleSave = async () => {
-        setSyncStatus({ status: 'syncing', time: null });
-        try {
-            // Save to local storage immediately for offline resilience
-            localStorage.setItem('studentData', JSON.stringify(students));
-
-            const formData = new URLSearchParams();
-            // The Google Apps Script expects the students array directly.
-            // Sending it nested in an object like { students: students } causes a "students.map is not a function" error on the backend.
-            formData.append('payload', JSON.stringify(students));
-
-            // Attempt to save to Google Sheets
-            const response = await fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                body: formData,
-            });
-
-             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Error del servidor: ${errorText}`);
-            }
-
-            const result = await response.json();
-            if (result.status !== 'success') {
-                throw new Error(result.message || 'Error desconocido al guardar en Google Sheets');
-            }
-
-            setInitialStudents(students);
-            setSyncStatus({ status: 'success', time: new Date() });
-        } catch (e) {
-            console.error("Failed to save data:", e);
-            const errorMessage = e instanceof Error ? e.message : "Error de red o del servidor.";
-            setSyncStatus({ status: 'error', time: new Date(), message: `Guardado local, pero falló la sincronización: ${errorMessage}` });
-        }
     };
     
     const handleAskQuestion = (questionText: string) => {
@@ -549,7 +583,7 @@ const App: React.FC = () => {
                     questions={questions.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime())}
                     onAskQuestion={handleAskQuestion}
                     onAddAnswer={handleAddAnswer}
-                    driveFolderUrl="https://drive.google.com/drive/folders/1FEXCIxMCTeg2XEcBvSgMuUQv5XlgQtX_?usp=drive_link" 
+                    driveFolderUrl="https://drive.google.com/drive/folders/18xkVPEYMjsZDAIutOVclhyMNdfwYhQb5?usp=drive_link" 
                  />;
             default:
                 return null;

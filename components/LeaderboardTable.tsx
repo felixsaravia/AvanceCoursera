@@ -108,8 +108,9 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, initialSt
         <tbody className="divide-y divide-gray-200 bg-white">
           {students.map((student, index) => {
             const originalStudent = initialStudents.find(s => s.id === student.id);
+            const isFinalizada = student.status === Status.Finalizada;
             return (
-            <tr key={student.id} className="hover:bg-gray-50 transition-colors duration-200">
+            <tr key={student.id} className={`${isFinalizada ? 'bg-slate-50 font-medium' : 'hover:bg-gray-50'} transition-colors duration-200`}>
               <td className="whitespace-nowrap text-center py-4 px-3 text-lg font-bold text-gray-500">{index + 1}</td>
               <td className="whitespace-nowrap py-4 px-3 text-sm font-medium text-gray-900">
                  {student.name}
@@ -143,11 +144,12 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, initialSt
                 const isEditing = editingCell?.studentId === student.id && editingCell?.courseIndex === i;
                 const isCurrentCourse = COURSE_NAMES[i] === currentCourseName;
                 const isModified = originalStudent && originalStudent.courseProgress[i] !== progress;
+                const isCompleted = progress === MAX_POINTS_PER_COURSE;
 
                 return (
                   <td
                     key={i}
-                    className={`relative whitespace-nowrap text-center py-2 px-1 text-sm text-gray-600 transition-colors ${isCurrentCourse ? 'bg-sky-50' : ''}`}
+                    className={`relative whitespace-nowrap text-center py-2 px-1 text-sm transition-colors ${isCurrentCourse ? 'bg-sky-50' : ''} ${isCompleted ? 'bg-green-100 text-green-800 font-bold' : 'text-gray-600'}`}
                     onClick={() => !isReadOnly && !isEditing && setEditingCell({ studentId: student.id, courseIndex: i })}
                   >
                      {isModified && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-yellow-400 rounded-full" title="Valor modificado"></span>}

@@ -23,7 +23,8 @@ const parseDateAsUTC = (dateString: string): Date => {
 
 const formatDate = (dateString: string) => {
     const date = parseDateAsUTC(dateString);
-    return new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }).format(date);
+    // Se añade timeZone: 'UTC' para evitar que la zona horaria local cambie la fecha.
+    return new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'UTC' }).format(date);
 };
 
 const ScheduleView: React.FC<ScheduleViewProps> = ({ schedule }) => {
@@ -75,7 +76,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ schedule }) => {
                                     ref={isCurrentDay ? todayRef : null}
                                     className={`${rowClasses} transition-colors`}
                                 >
-                                    <td className={`whitespace-nowrap py-3 px-3 text-sm font-medium ${isCurrentDay ? 'text-sky-300' : textClasses}`}>
+                                    <td className={`whitespace-nowrap py-3 px-3 text-sm font-medium capitalize ${isCurrentDay ? 'text-sky-300' : textClasses}`}>
                                         {formatDate(item.date)}
                                     </td>
                                     <td className="py-3 px-3 text-sm">

@@ -20,7 +20,7 @@ const CertificatesView: React.FC<CertificatesViewProps> = ({ students, onUpdateC
             <p className="text-gray-500">Haz clic en el estado de un certificado para marcarlo como entregado o pendiente.</p>
           </div>
           <a
-            href="https://drive.google.com/drive/folders/1FEXCIxMCTeg2XEcBvSgMuUQv5XlgQtX_?usp=drive_link"
+            href="https://drive.google.com/drive/folders/18xkVPEYMjsZDAIutOVclhyMNdfwYhQb5?usp=drive_link"
             target="_blank"
             rel="noopener noreferrer"
             className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center gap-2 px-4 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-500 transition-colors"
@@ -80,6 +80,20 @@ const CertificatesView: React.FC<CertificatesViewProps> = ({ students, onUpdateC
            </table>
         </div>
        </div>
+       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Tutorial: Cómo subir tu certificado</h2>
+          <p className="text-gray-500 mb-4">Este video te guiará en el proceso para subir correctamente tus certificados a la carpeta compartida de Drive.</p>
+          <div className="aspect-video">
+              <iframe 
+                  className="w-full h-full rounded-lg" 
+                  src="https://www.youtube.com/embed/DZq0-TUd2MQ" 
+                  title="Video de Inducción y Subida de Certificados" 
+                  frameBorder="0" 
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                  allowFullScreen>
+              </iframe>
+          </div>
+      </div>
     </section>
   );
 };
