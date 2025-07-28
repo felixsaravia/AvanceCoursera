@@ -20,6 +20,8 @@ export interface LastModification {
 export interface Student {
   id: number;
   name: string;
+  institucion?: string;
+  departamento?: string;
   phone?: string;
   courseProgress: number[]; // Array of 5 numbers for each course (0-100)
   totalPoints: number;
@@ -54,6 +56,13 @@ export interface ScheduleItem {
   course: string;
   module: string;
 }
+
+export interface ProcessedScheduleItem extends ScheduleItem {
+  moduleNumber: number;
+  expectedPoints: number;
+  isCurrentDay: boolean;
+}
+
 
 export interface Break {
     id: number;

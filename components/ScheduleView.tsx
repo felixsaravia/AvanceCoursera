@@ -1,13 +1,5 @@
 import React from 'react';
-
-interface ProcessedScheduleItem {
-  date: string;
-  course: string;
-  module: string;
-  moduleNumber: number;
-  expectedPoints: number;
-  isCurrentDay: boolean;
-}
+import { ProcessedScheduleItem } from '../types';
 
 interface ScheduleViewProps {
   schedule: ProcessedScheduleItem[];

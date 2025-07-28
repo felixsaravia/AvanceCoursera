@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Student, Status } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Student, Status, ProcessedScheduleItem } from '../types';
 import StatusBadge from './StatusBadge';
 import RankBadge from './RankBadge';
 import ProgressChart from './ProgressChart';
@@ -10,10 +10,9 @@ import TrophyBadge from './TrophyBadge';
 interface StudentProfileViewProps {
     student: Student;
     chartData: any; // Simplified for now
-    note: string;
-    onUpdateNote: (note: string) => void;
     onBack: () => void;
     isFirstPlace: boolean;
+    schedule: ProcessedScheduleItem[];
 }
 
 const InfoCard: React.FC<{ title: string; children: React.ReactNode; className?: string }> = ({ title, children, className = '' }) => (
@@ -32,27 +31,7 @@ const VerificationItem: React.FC<{ label: string; verified: boolean }> = ({ labe
     </div>
 );
 
-const useDebounce = (value: string, delay: number) => {
-    const [debouncedValue, setDebouncedValue] = useState(value);
-    useEffect(() => {
-        const handler = setTimeout(() => {
-            setDebouncedValue(value);
-        }, delay);
-        return () => {
-            clearTimeout(handler);
-        };
-    }, [value, delay]);
-    return debouncedValue;
-};
-
-const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, chartData, note, onUpdateNote, onBack, isFirstPlace }) => {
-    const [currentNote, setCurrentNote] = useState(note);
-    const debouncedNote = useDebounce(currentNote, 500);
-
-    useEffect(() => {
-        onUpdateNote(debouncedNote);
-    }, [debouncedNote, onUpdateNote]);
-
+const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, chartData, onBack, isFirstPlace, schedule }) => {
     const isTop3 = student.rankBadge === 'Top 3';
 
     const achievements = {
@@ -63,6 +42,58 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, chartD
         lightspeed: student.expectedPoints > 0 && student.totalPoints >= student.expectedPoints * 1.5,
         knowledgeMaster: student.totalPoints === TOTAL_MAX_POINTS
     };
+    
+    const pointsChange = student.lastModification
+        ? student.lastModification.newTotalPoints - student.lastModification.previousTotalPoints
+        : null;
+
+    const catchUpPlan = useMemo(() => {
+        if (student.status !== Status.Atrasada && student.status !== Status.Riesgo) {
+            return null;
+        }
+
+        const pointsNeeded = Math.round(student.expectedPoints - student.totalPoints);
+        if (pointsNeeded <= 0) return null;
+
+        const uniqueScheduleDays = [...new Map(schedule.map(item => [item.date, item])).values()];
+        
+        let lastCompletedIndex = -1;
+        for (let i = uniqueScheduleDays.length - 1; i >= 0; i--) {
+            if (uniqueScheduleDays[i].expectedPoints <= student.totalPoints) {
+                lastCompletedIndex = i;
+                break;
+            }
+        }
+
+        let targetIndex = -1;
+        for (let i = uniqueScheduleDays.length - 1; i >= 0; i--) {
+            if (uniqueScheduleDays[i].expectedPoints <= student.expectedPoints) {
+                targetIndex = i;
+                break;
+            }
+        }
+
+        if (targetIndex < 0) return null;
+        
+        const daysToComplete = uniqueScheduleDays.slice(lastCompletedIndex + 1, targetIndex + 1);
+        const modulesToComplete = schedule.filter(item => daysToComplete.some(day => day.date === item.date));
+        
+        const groupedByCourse = modulesToComplete.reduce((acc, item) => {
+            if (!acc[item.course]) {
+                acc[item.course] = [];
+            }
+            if (!acc[item.course].some(m => m.module === item.module)) {
+               acc[item.course].push({ module: item.module, moduleNumber: item.moduleNumber });
+            }
+            return acc;
+        }, {} as Record<string, { module: string; moduleNumber: number }[]>);
+
+
+        return {
+            pointsNeeded,
+            groupedByCourse,
+        };
+    }, [student.status, student.totalPoints, student.expectedPoints, schedule]);
 
     return (
         <div className="space-y-6">
@@ -74,6 +105,13 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, chartD
                         Volver al Monitor
                     </button>
                     <h1 className="text-3xl font-extrabold text-gray-900">{student.name}</h1>
+                    {(student.institucion || student.departamento) && (
+                        <p className="text-lg text-gray-500 mt-1">
+                            {student.institucion && <span>{student.institucion}</span>}
+                            {student.institucion && student.departamento && <span className="mx-2">&bull;</span>}
+                            {student.departamento && <span>{student.departamento}</span>}
+                        </p>
+                    )}
                 </div>
                 <div className="flex flex-col items-start sm:items-end gap-2">
                     <div className="flex items-center gap-2">
@@ -83,6 +121,30 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, chartD
                     <p className="text-lg font-bold text-sky-600">{student.totalPoints} <span className="text-sm font-medium text-gray-500">/ {student.expectedPoints.toFixed(0)} puntos esperados</span></p>
                 </div>
             </div>
+
+            {/* Catch Up Plan Card */}
+            {catchUpPlan && Object.keys(catchUpPlan.groupedByCourse).length > 0 && (
+                <InfoCard title="Plan para Ponerse al Día">
+                    <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg mb-6">
+                        <p className="font-bold text-amber-900">Necesitas aproximadamente {catchUpPlan.pointsNeeded} puntos para estar "Al Día".</p>
+                        <p className="text-sm text-amber-700">Concéntrate en los siguientes módulos para lograrlo:</p>
+                    </div>
+                    <div className="space-y-4">
+                        {Object.entries(catchUpPlan.groupedByCourse).map(([courseName, modules]) => (
+                            <div key={courseName}>
+                                <h4 className="font-semibold text-gray-800 mb-2">{courseName}</h4>
+                                <ul className="space-y-2 pl-5 list-disc list-outside text-gray-600">
+                                    {modules.map(module => (
+                                        <li key={module.module}>
+                                            <span className="font-medium">{`Módulo ${module.moduleNumber}:`}</span> {module.module}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        ))}
+                    </div>
+                </InfoCard>
+            )}
 
             {/* Main Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -179,25 +241,33 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, chartD
                         </div>
                     </InfoCard>
                     
-                    <InfoCard title="Notas Privadas del Instructor">
-                        <textarea
-                            value={currentNote}
-                            onChange={(e) => setCurrentNote(e.target.value)}
-                            placeholder="Anota aquí tus comentarios, seguimientos o recordatorios sobre esta estudiante..."
-                            className="w-full h-32 bg-gray-50 border-gray-200 rounded-md p-3 text-gray-900 focus:ring-2 focus:ring-sky-500 focus:outline-none transition-colors"
-                        />
-                        <p className="text-xs text-gray-400 mt-2">Los cambios se guardan automáticamente.</p>
-                    </InfoCard>
-
                     <InfoCard title="Bitácora de Cambios">
-                        {student.lastModification ? (
-                            <div className="flex items-start gap-3 text-sm">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 flex-shrink-0 mt-0.5"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
-                                <div>
-                                    <p className="text-gray-500 font-medium">Última modificación:</p>
-                                    <p className="text-gray-800 font-semibold">
-                                        {new Intl.DateTimeFormat('es-ES', { dateStyle: 'long', timeStyle: 'short' }).format(new Date(student.lastModification.timestamp))}
-                                    </p>
+                        {student.lastModification && pointsChange !== null ? (
+                            <div className="space-y-5">
+                                <div className="flex items-start gap-3 text-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 flex-shrink-0 mt-0.5"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+                                    <div>
+                                        <p className="text-gray-500 font-medium">Fecha de modificación:</p>
+                                        <p className="text-gray-800 font-semibold">
+                                            {new Intl.DateTimeFormat('es-ES', { dateStyle: 'long', timeStyle: 'short' }).format(new Date(student.lastModification.timestamp))}
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex items-start gap-3 text-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 flex-shrink-0 mt-0.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                                    <div>
+                                        <p className="text-gray-500 font-medium">Cambio en puntaje:</p>
+                                        <div className="mt-2 space-y-1">
+                                            <p className="text-gray-700">Puntaje anterior: <span className="font-semibold text-gray-900">{student.lastModification.previousTotalPoints}</span></p>
+                                            <p className="text-gray-700">Puntaje nuevo: <span className="font-semibold text-gray-900">{student.lastModification.newTotalPoints}</span></p>
+                                            <p className="text-gray-700">Avance: 
+                                                <span className={`font-bold ml-1 ${pointsChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                    {pointsChange >= 0 ? '+' : ''}{pointsChange} puntos
+                                                </span>
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         ) : (

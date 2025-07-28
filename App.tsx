@@ -1,6 +1,11 @@
+
+
+
+
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Student, Status, CommunityQuestion, Answer, ScheduleItem, Break, LastModification } from './types';
-import { MOCK_NAMES, TOTAL_COURSES, MAX_POINTS_PER_COURSE, TOTAL_MAX_POINTS, STATUS_CONFIG, schedule, orderedStatuses, COURSE_NAMES, STUDENT_PHONE_NUMBERS } from './constants';
+import { Student, Status, CommunityQuestion, Answer, ScheduleItem, Break, LastModification, ProcessedScheduleItem } from './types';
+import { MOCK_NAMES, TOTAL_COURSES, MAX_POINTS_PER_COURSE, TOTAL_MAX_POINTS, STATUS_CONFIG, schedule, orderedStatuses, COURSE_NAMES, STUDENT_PHONE_NUMBERS, STUDENT_INSTITUTIONS, STUDENT_DEPARTMENTS } from './constants';
 import LeaderboardTable from './components/LeaderboardTable';
 import AIAnalyzer from './components/AIAnalyzer';
 import BottomNav from './components/BottomNav';
@@ -111,7 +116,6 @@ const App: React.FC = () => {
     const [isDataLoading, setIsDataLoading] = useState(true);
     const [questions, setQuestions] = useState<CommunityQuestion[]>([]);
     const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
-    const [instructorNotes, setInstructorNotes] = useState<{ [studentId: number]: string }>({});
     
     const hasUnsavedChanges = useMemo(() => {
         return JSON.stringify(students) !== JSON.stringify(initialStudents);
@@ -164,7 +168,7 @@ const App: React.FC = () => {
       };
     }, [scheduleUpToToday]);
 
-    const processedSchedule = useMemo(() => {
+    const processedSchedule: ProcessedScheduleItem[] = useMemo(() => {
         const allUniqueDates = [...new Set(schedule.map(item => item.date))].sort((a,b) => parseDateAsUTC(a).getTime() - parseDateAsUTC(b).getTime());
         const totalScheduledDays = allUniqueDates.length;
         if (totalScheduledDays === 0) return [];
@@ -217,10 +221,29 @@ const App: React.FC = () => {
           const expectedPoints = expectedPointsToday;
           const status = calculateStatus(totalPoints, expectedPoints);
 
+          let lastModification: LastModification | undefined = undefined;
+
+          const timestamp = s["Ultima Modificacion"];
+          const prevPoints = s["Puntos Actuales"]; // Use "Puntos Actuales" to read
+          const newPoints = s["Puntos Nuevos"];
+
+          if (timestamp && typeof timestamp === 'string') {
+              lastModification = {
+                  timestamp: timestamp,
+                  previousTotalPoints: Number(prevPoints ?? 0),
+                  newTotalPoints: Number(newPoints ?? 0),
+              };
+          } 
+          else if (s.lastModification) {
+              lastModification = s.lastModification;
+          }
+
           const student: Student = {
               id: s.id ?? index + 1,
               name: s.name,
               phone: STUDENT_PHONE_NUMBERS[s.name] || undefined,
+              institucion: s['Institución'] || STUDENT_INSTITUTIONS[s.name] || undefined,
+              departamento: s['Departamento'] || STUDENT_DEPARTMENTS[s.name] || undefined,
               courseProgress,
               totalPoints,
               expectedPoints,
@@ -230,7 +253,7 @@ const App: React.FC = () => {
               certificateStatus: s.certificateStatus || Array(TOTAL_COURSES).fill(false),
               finalCertificateStatus: s.finalCertificateStatus ?? false,
               dtvStatus: s.dtvStatus ?? false,
-              lastModification: s.lastModification,
+              lastModification,
           };
           return student;
       });
@@ -242,34 +265,29 @@ const App: React.FC = () => {
         const studentsToSave = students.map(currentStudent => {
             const initialStudent = initialStudents.find(s => s.id === currentStudent.id);
     
-            // Re-calculate all derived data to ensure consistency.
             const totalPoints = currentStudent.courseProgress.reduce((sum, p) => sum + p, 0);
             const status = calculateStatus(totalPoints, currentStudent.expectedPoints);
     
-            // This is the bulletproof fix:
-            // If the current student was modified, it will have a new `lastModification` object.
-            // If it was NOT modified, its `lastModification` from the state might be missing.
-            // In that case, we MUST fall back to the `initialStudent`'s data, which is our clean backup.
-            // This prevents sending `undefined` and causing the script to erase the cell.
             const finalLastModification = currentStudent.lastModification || initialStudent?.lastModification;
     
-            // Build a clean object with all required fields to send to the script.
-            // This prevents any extra properties from the UI state from being sent.
             return {
                 id: currentStudent.id,
                 name: currentStudent.name,
                 phone: currentStudent.phone,
+                "Institución": currentStudent.institucion,
+                "Departamento": currentStudent.departamento,
                 courseProgress: currentStudent.courseProgress,
                 identityVerified: currentStudent.identityVerified,
                 twoFactorVerified: currentStudent.twoFactorVerified,
                 certificateStatus: currentStudent.certificateStatus,
                 finalCertificateStatus: currentStudent.finalCertificateStatus,
                 dtvStatus: currentStudent.dtvStatus,
-                // These are the fields the Google Script expects.
                 totalPoints: totalPoints,
                 expectedPoints: currentStudent.expectedPoints,
                 status: status,
-                lastModification: finalLastModification,
+                "Ultima Modificacion": finalLastModification?.timestamp || null,
+                "Puntos Actuales": finalLastModification?.previousTotalPoints ?? null, // Use "Puntos Actuales" to write
+                "Puntos Nuevos": finalLastModification?.newTotalPoints ?? null,
             };
         });
     
@@ -413,15 +431,6 @@ const App: React.FC = () => {
         loadDataFromGoogleSheets();
 
         try {
-            const savedNotes = localStorage.getItem('instructorNotes');
-            if (savedNotes) {
-                setInstructorNotes(JSON.parse(savedNotes));
-            }
-        } catch (e) {
-            console.error("Failed to load instructor notes from localStorage", e);
-        }
-
-        try {
             const savedQuestions = localStorage.getItem('communityQuestions');
             if(savedQuestions) {
                 const parsedQuestions: CommunityQuestion[] = JSON.parse(savedQuestions).map(q => ({...q, timestamp: new Date(q.timestamp), answers: q.answers.map(a => ({...a, timestamp: new Date(a.timestamp)})) }));
@@ -494,12 +503,6 @@ const App: React.FC = () => {
             }
             return s;
         }));
-    };
-    
-    const handleUpdateNote = (studentId: number, note: string) => {
-        const updatedNotes = { ...instructorNotes, [studentId]: note };
-        setInstructorNotes(updatedNotes);
-        localStorage.setItem('instructorNotes', JSON.stringify(updatedNotes));
     };
     
     const handleAskQuestion = (questionText: string) => {
@@ -599,10 +602,9 @@ const App: React.FC = () => {
                 <StudentProfileView
                     student={selectedStudent}
                     chartData={chartData}
-                    note={instructorNotes[selectedStudent.id] || ''}
-                    onUpdateNote={(note) => handleUpdateNote(selectedStudent.id, note)}
                     onBack={handleClearSelectedStudent}
                     isFirstPlace={isFirstPlace}
+                    schedule={processedSchedule}
                 />
             </main>
         )

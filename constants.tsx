@@ -47,6 +47,50 @@ export const STUDENT_PHONE_NUMBERS: { [key: string]: string } = {
     "Gabriela Alexandra Alvayeros Guirola": "50370464925"
 };
 
+export const STUDENT_INSTITUTIONS: { [key: string]: string } = {
+    "Fatima Beatriz Masin Aguilar": "Universidad Centroamericana José Simeón Cañas-FGK",
+    "Nuria Lisseth Rivera Mestizo": "Instituto Nacional Thomas Jefferson",
+    "Emeli Lisvea Navarrete Flores": "Universidad Catolica de El Salvador",
+    "Marlene Lizbeth Guevara Tobar": "Colegio Josep",
+    "Ana Milena Cortez Linares": "ITCA FEPADE",
+    "Adriana Marcela Chacón Reyes": "Universidad Don Bosco",
+    "Kateryn Estefany Zelada Galicia": "Escuela Monica Herrera",
+    "María Fernanda Martínez Cupido": "UCA",
+    "Tania Abigail Barahona Fuentes": "Universidad de Sonsonate",
+    "Laura Rocío Perdomo Ramírez": "UCA",
+    "Karla Michelle González González": "Universidad Católica de El Salvador",
+    "María José Peraza Peña": "Universidad Gerardo Barrios",
+    "Rebeca Michelle Castro Pineda": "ITCA FEPADE",
+    "Katherine Elena Hernandez Quintanilla": "Universidad Francisco Gavidia",
+    "Tanya Gabriela González Ramírez": "Universidad José Simeón",
+    "Gabriela Alexandra Alvayeros Guirola": "ITCA FEPADE",
+    "Alejandra Lisbeth Zavala Calles": "Universidad Gerardo Barrios",
+    "Isabella Gavidia Molina": "Escuela Bilingüe Maquilishuat",
+    "Katherine Alexandra Hernández Suriano": "ESFE"
+};
+
+export const STUDENT_DEPARTMENTS: { [key: string]: string } = {
+    "Fatima Beatriz Masin Aguilar": "San Salvador",
+    "Nuria Lisseth Rivera Mestizo": "Sonsonate",
+    "Emeli Lisvea Navarrete Flores": "Santa Ana",
+    "Marlene Lizbeth Guevara Tobar": "San Salvador",
+    "Ana Milena Cortez Linares": "Sonsonate",
+    "Adriana Marcela Chacón Reyes": "Santa Ana",
+    "Kateryn Estefany Zelada Galicia": "San Salvador",
+    "María Fernanda Martínez Cupido": "La Libertad",
+    "Tania Abigail Barahona Fuentes": "Sonsonate",
+    "Laura Rocío Perdomo Ramírez": "Sonsonate",
+    "Karla Michelle González González": "Santa Ana",
+    "María José Peraza Peña": "La Unión",
+    "Rebeca Michelle Castro Pineda": "Sonsonate",
+    "Katherine Elena Hernandez Quintanilla": "Santa Ana",
+    "Tanya Gabriela González Ramírez": "San Salvador",
+    "Gabriela Alexandra Alvayeros Guirola": "Sonsonate",
+    "Alejandra Lisbeth Zavala Calles": "La Unión",
+    "Isabella Gavidia Molina": "La Libertad",
+    "Katherine Alexandra Hernández Suriano": "Sonsonate"
+};
+
 
 export const TOTAL_COURSES = 6;
 export const MAX_POINTS_PER_COURSE = 100;
