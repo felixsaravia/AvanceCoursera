@@ -42,10 +42,6 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, chartD
         lightspeed: student.expectedPoints > 0 && student.totalPoints >= student.expectedPoints * 1.5,
         knowledgeMaster: student.totalPoints === TOTAL_MAX_POINTS
     };
-    
-    const pointsChange = student.lastModification
-        ? student.lastModification.newTotalPoints - student.lastModification.previousTotalPoints
-        : null;
 
     const catchUpPlan = useMemo(() => {
         if (student.status !== Status.Atrasada && student.status !== Status.Riesgo) {
@@ -242,32 +238,14 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, chartD
                     </InfoCard>
                     
                     <InfoCard title="Bitácora de Cambios">
-                        {student.lastModification && pointsChange !== null ? (
-                            <div className="space-y-5">
-                                <div className="flex items-start gap-3 text-sm">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 flex-shrink-0 mt-0.5"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
-                                    <div>
-                                        <p className="text-gray-500 font-medium">Fecha de modificación:</p>
-                                        <p className="text-gray-800 font-semibold">
-                                            {new Intl.DateTimeFormat('es-ES', { dateStyle: 'long', timeStyle: 'short' }).format(new Date(student.lastModification.timestamp))}
-                                        </p>
-                                    </div>
-                                </div>
-                                
-                                <div className="flex items-start gap-3 text-sm">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 flex-shrink-0 mt-0.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-                                    <div>
-                                        <p className="text-gray-500 font-medium">Cambio en puntaje:</p>
-                                        <div className="mt-2 space-y-1">
-                                            <p className="text-gray-700">Puntaje anterior: <span className="font-semibold text-gray-900">{student.lastModification.previousTotalPoints}</span></p>
-                                            <p className="text-gray-700">Puntaje nuevo: <span className="font-semibold text-gray-900">{student.lastModification.newTotalPoints}</span></p>
-                                            <p className="text-gray-700">Avance: 
-                                                <span className={`font-bold ml-1 ${pointsChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                    {pointsChange >= 0 ? '+' : ''}{pointsChange} puntos
-                                                </span>
-                                            </p>
-                                        </div>
-                                    </div>
+                        {student.lastModification ? (
+                            <div className="flex items-start gap-3 text-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 flex-shrink-0 mt-0.5"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+                                <div>
+                                    <p className="text-gray-500 font-medium">Última modificación:</p>
+                                    <p className="text-gray-800 font-semibold">
+                                        {new Intl.DateTimeFormat('es-ES', { dateStyle: 'long', timeStyle: 'short' }).format(new Date(student.lastModification.timestamp))}
+                                    </p>
                                 </div>
                             </div>
                         ) : (

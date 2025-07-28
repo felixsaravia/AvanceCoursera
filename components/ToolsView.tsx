@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
+import { ProcessedScheduleItem } from '../types';
 import PomodoroTimer from './tools/PomodoroTimer';
 import AIQuickQuestion from './tools/AIQuickQuestion';
 import CreativeIdeaGenerator from './tools/CreativeIdeaGenerator';
 import AIInterviewSimulator from './tools/AIInterviewSimulator';
 import AIImageQuery from './tools/AIImageQuery';
+import CatchUpPlanner from './tools/CatchUpPlanner';
 
-type Tool = 'pomodoro' | 'ai-question' | 'creative-idea' | 'ai-interview-simulator' | 'ai-image-query' | null;
+type Tool = 'pomodoro' | 'ai-question' | 'creative-idea' | 'ai-interview-simulator' | 'ai-image-query' | 'catch-up-planner' | null;
 
 const ToolCard = ({ icon, title, description, onClick, disabled = false }) => (
     <button
@@ -23,7 +25,15 @@ const ToolCard = ({ icon, title, description, onClick, disabled = false }) => (
     </button>
 );
 
-const ToolsView: React.FC = () => {
+interface ToolsViewProps {
+    processedSchedule: ProcessedScheduleItem[];
+    today: Date;
+    courseNames: string[];
+    getExpectedPointsForDate: (date: Date) => number;
+    expectedPointsToday: number;
+}
+
+const ToolsView: React.FC<ToolsViewProps> = ({ processedSchedule, today, courseNames, getExpectedPointsForDate, expectedPointsToday }) => {
     const [activeTool, setActiveTool] = useState<Tool>(null);
 
     const renderActiveTool = () => {
@@ -38,6 +48,14 @@ const ToolsView: React.FC = () => {
                 return <AIInterviewSimulator />;
             case 'ai-image-query':
                 return <AIImageQuery />;
+            case 'catch-up-planner':
+                return <CatchUpPlanner 
+                    processedSchedule={processedSchedule}
+                    today={today}
+                    courseNames={courseNames}
+                    getExpectedPointsForDate={getExpectedPointsForDate}
+                    expectedPointsToday={expectedPointsToday}
+                />;
             default:
                 return null;
         }
@@ -45,6 +63,12 @@ const ToolsView: React.FC = () => {
 
     const toolMenu = (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <ToolCard
+                onClick={() => setActiveTool('catch-up-planner')}
+                icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M11 16h6"/><path d="m8 16-2-2 2-2"/></svg>}
+                title="Plan de Puesta al Día"
+                description="Diseña un plan de estudio personalizado para alcanzar el ritmo del grupo."
+            />
             <ToolCard
                 onClick={() => setActiveTool('pomodoro')}
                 icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>}

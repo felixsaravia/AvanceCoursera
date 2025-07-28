@@ -1,8 +1,3 @@
-
-
-
-
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Student, Status, CommunityQuestion, Answer, ScheduleItem, Break, LastModification, ProcessedScheduleItem } from './types';
 import { MOCK_NAMES, TOTAL_COURSES, MAX_POINTS_PER_COURSE, TOTAL_MAX_POINTS, STATUS_CONFIG, schedule, orderedStatuses, COURSE_NAMES, STUDENT_PHONE_NUMBERS, STUDENT_INSTITUTIONS, STUDENT_DEPARTMENTS } from './constants';
@@ -17,6 +12,7 @@ import ProgressSummary from './components/ProgressSummary';
 import StatusSummary from './components/StatusSummary';
 import ScheduleView from './components/ScheduleView';
 import StudentProfileView from './components/StudentProfileView';
+import StatisticsView from './components/StatisticsView';
 
 const parseDateAsUTC = (dateString: string): Date => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
@@ -123,6 +119,86 @@ const App: React.FC = () => {
     
     const today = useMemo(() => getTodayInElSalvador(), []);
 
+    const programMilestones = useMemo(() => {
+        if (schedule.length === 0) return [];
+
+        const milestones: { date: Date; points: number }[] = [];
+        
+        // Starting point
+        const firstDay = parseDateAsUTC(schedule[0].date);
+        const programStartDate = new Date(firstDay);
+        programStartDate.setUTCDate(programStartDate.getUTCDate() - 1);
+        milestones.push({ date: programStartDate, points: 0 });
+
+        // Course end points
+        COURSE_NAMES.forEach((courseName, index) => {
+            const courseDates = schedule
+                .filter(item => item.course === courseName)
+                .map(item => parseDateAsUTC(item.date))
+                .filter(d => !isNaN(d.getTime()));
+            
+            if (courseDates.length > 0) {
+                const endDate = new Date(Math.max.apply(null, courseDates.map(d => d.getTime())));
+                milestones.push({
+                    date: endDate,
+                    points: (index + 1) * MAX_POINTS_PER_COURSE
+                });
+            }
+        });
+
+        return milestones;
+    }, []);
+
+    const getExpectedPointsForDate = useCallback((targetDate: Date): number => {
+        if (programMilestones.length < 2) return 0;
+
+        const targetTime = targetDate.getTime();
+
+        const firstMilestone = programMilestones[0];
+        if (targetTime < firstMilestone.date.getTime()) {
+            return 0;
+        }
+        
+        const lastMilestone = programMilestones[programMilestones.length - 1];
+        if (targetTime >= lastMilestone.date.getTime()) {
+            return lastMilestone.points;
+        }
+
+        let prevMilestone = firstMilestone;
+        let nextMilestone = programMilestones[1];
+
+        for (let i = 1; i < programMilestones.length; i++) {
+            if (targetTime < programMilestones[i].date.getTime()) {
+                prevMilestone = programMilestones[i - 1];
+                nextMilestone = programMilestones[i];
+                break;
+            } else if (targetTime === programMilestones[i].date.getTime()) {
+                 prevMilestone = programMilestones[i];
+                 nextMilestone = programMilestones[i];
+                 break;
+            }
+        }
+
+        const prevTime = prevMilestone.date.getTime();
+        const nextTime = nextMilestone.date.getTime();
+
+        if (nextTime === prevTime) {
+            return nextMilestone.points;
+        }
+        
+        const segmentDuration = nextTime - prevTime;
+        const timeIntoSegment = targetTime - prevTime;
+        const segmentPoints = nextMilestone.points - prevMilestone.points;
+        const progressInSegment = timeIntoSegment / segmentDuration;
+        const pointsInSegment = progressInSegment * segmentPoints;
+        
+        return prevMilestone.points + pointsInSegment;
+    }, [programMilestones]);
+
+    const expectedPointsToday = useMemo(() => {
+        return getExpectedPointsForDate(today);
+    }, [today, getExpectedPointsForDate]);
+
     const scheduleUpToToday = useMemo(() => {
         const todayUTC = today.getTime();
         return schedule.filter(item => {
@@ -131,16 +207,6 @@ const App: React.FC = () => {
         });
     }, [today]);
 
-    const expectedPointsToday = useMemo(() => {
-        const uniqueDays = new Set(scheduleUpToToday.map(item => item.date));
-        const totalScheduledDays = new Set(schedule.map(item => item.date)).size;
-        
-        if (totalScheduledDays === 0) return 0;
-
-        const pointsPerDay = TOTAL_MAX_POINTS / totalScheduledDays;
-        return uniqueDays.size * pointsPerDay;
-    }, [scheduleUpToToday]);
-    
     const { currentCourseName, currentModuleName, currentModuleNumber } = useMemo(() => {
       const lastScheduledItem = scheduleUpToToday.length > 0 ? scheduleUpToToday[scheduleUpToToday.length - 1] : null;
       
@@ -169,16 +235,6 @@ const App: React.FC = () => {
     }, [scheduleUpToToday]);
 
     const processedSchedule: ProcessedScheduleItem[] = useMemo(() => {
-        const allUniqueDates = [...new Set(schedule.map(item => item.date))].sort((a,b) => parseDateAsUTC(a).getTime() - parseDateAsUTC(b).getTime());
-        const totalScheduledDays = allUniqueDates.length;
-        if (totalScheduledDays === 0) return [];
-
-        const pointsPerDay = TOTAL_MAX_POINTS / totalScheduledDays;
-        const dateToPointsMap = new Map<string, number>();
-        allUniqueDates.forEach((date, index) => {
-            dateToPointsMap.set(date, (index + 1) * pointsPerDay);
-        });
-        
         const courseToModulesMap = new Map<string, string[]>();
         COURSE_NAMES.forEach(courseName => {
             const modules = [...new Set(schedule.filter(item => item.course === courseName).map(item => item.module))];
@@ -190,14 +246,16 @@ const App: React.FC = () => {
         return schedule.map(item => {
             const modulesForCourse = courseToModulesMap.get(item.course) || [];
             const moduleNumber = modulesForCourse.indexOf(item.module) + 1;
+            const itemDate = parseDateAsUTC(item.date);
+            
             return {
                 ...item,
                 moduleNumber: moduleNumber > 0 ? moduleNumber : 1,
-                expectedPoints: dateToPointsMap.get(item.date) || 0,
+                expectedPoints: getExpectedPointsForDate(itemDate),
                 isCurrentDay: item.date === todayString
             }
         });
-    }, [today]);
+    }, [today, getExpectedPointsForDate]);
 
 
     const calculateStatus = useCallback((totalPoints: number, expectedPoints: number): Status => {
@@ -357,10 +415,13 @@ const App: React.FC = () => {
         const totalProgramDays = allUniqueDates.length;
         if (totalProgramDays === 0) return null;
 
-        const expectedSeries = [{day: 0, points: 0}].concat(allUniqueDates.map((_, index) => ({
-            day: index + 1,
-            points: ((index + 1) / totalProgramDays) * TOTAL_MAX_POINTS
-        })));
+        const expectedSeries = [{day: 0, points: 0}].concat(allUniqueDates.map((dateStr, index) => {
+            const date = parseDateAsUTC(dateStr);
+            return {
+                day: index + 1,
+                points: getExpectedPointsForDate(date)
+            };
+        }));
 
         const todayUTC = today.getTime();
         const datesUpToToday = allUniqueDates.filter(d => parseDateAsUTC(d).getTime() <= todayUTC);
@@ -376,7 +437,7 @@ const App: React.FC = () => {
         }
         
         return { expectedSeries, studentSeries, totalDays: totalProgramDays };
-    }, [selectedStudent, schedule, today]);
+    }, [selectedStudent, schedule, today, getExpectedPointsForDate]);
 
 
     const loadDataFromGoogleSheets = useCallback(async () => {
@@ -571,16 +632,23 @@ const App: React.FC = () => {
                             onSelectStudent={handleSelectStudent}
                         />
                         <AIAnalyzer students={sortedStudents} expectedPointsToday={expectedPointsToday} />
+                        <StatisticsView students={sortedStudents} />
                     </div>
                 );
             case 'schedule':
-                return <ScheduleView schedule={processedSchedule} />;
+                return <ScheduleView schedule={processedSchedule} today={today} />;
             case 'verification':
                 return <VerificationView students={sortedStudents} onUpdateVerification={handleUpdateVerification} isReadOnly={false}/>;
             case 'certificates':
                 return <CertificatesView students={sortedStudents} onUpdateCertificateStatus={handleUpdateCertificateStatus} onUpdateOtherStatus={handleUpdateOtherStatus} isReadOnly={false}/>;
             case 'tools':
-                return <ToolsView />;
+                return <ToolsView
+                            processedSchedule={processedSchedule}
+                            today={today}
+                            courseNames={COURSE_NAMES}
+                            getExpectedPointsForDate={getExpectedPointsForDate}
+                            expectedPointsToday={expectedPointsToday}
+                       />;
             case 'help':
                  return <HelpView 
                     questions={questions.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime())}
