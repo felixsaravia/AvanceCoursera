@@ -362,91 +362,118 @@ const App: React.FC = () => {
     }, [processStudentData]);
 
     const handleSave = async () => {
-        setSyncStatus({ status: 'syncing', time: null, message: 'Guardando...' });
-    
-        const studentsToSave = students.map(currentStudent => {
-            const initialStudent = initialStudents.find(s => s.id === currentStudent.id);
-    
-            const totalPoints = currentStudent.courseProgress.reduce((sum, p) => sum + p, 0);
-            const status = calculateStatus(totalPoints, currentStudent.expectedPoints);
-    
-            const finalLastModification = currentStudent.lastModification || initialStudent?.lastModification;
-    
-            return {
-                id: currentStudent.id,
-                name: currentStudent.name,
-                phone: currentStudent.phone,
-                "Institución": currentStudent.institucion,
-                "Departamento": currentStudent.departamento,
-                courseProgress: currentStudent.courseProgress,
-                identityVerified: currentStudent.identityVerified,
-                twoFactorVerified: currentStudent.twoFactorVerified,
-                certificateStatus: currentStudent.certificateStatus,
-                finalCertificateStatus: currentStudent.finalCertificateStatus,
-                dtvStatus: currentStudent.dtvStatus,
-                totalPoints: totalPoints,
-                expectedPoints: currentStudent.expectedPoints,
-                status: status,
-                "Ultima Modificacion": finalLastModification?.timestamp || null,
-                "Puntos Actuales": finalLastModification?.previousTotalPoints ?? null,
-                "Puntos Nuevos": finalLastModification?.newTotalPoints ?? null,
-            };
-        });
-    
-        try {
-            const formData = new URLSearchParams();
-            formData.append('payload', JSON.stringify(studentsToSave));
-    
-            const response = await fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                body: formData,
-            });
-    
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Error del servidor: ${response.status} ${errorText}`);
-            }
-    
-            const responseText = await response.text();
-            let result;
-    
-            try {
-                result = JSON.parse(responseText);
-            } catch (e) {
-                // Not a JSON response, might be plain text.
-                if (responseText.includes('filas actualizadas')) {
-                    // Treat as a success, but we need to fetch the latest data to be sure.
-                    setSyncStatus({ status: 'success', time: new Date(), lastAction: 'save', message: '¡Guardado! Actualizando datos...' });
-                    await loadDataFromGoogleSheets();
-                    return; // Exit after successful reload
-                }
-                // An unknown text response is an error.
-                throw new Error(`Respuesta inesperada del servidor: ${responseText}`);
-            }
-    
-            // It is a valid JSON. Check its content.
-            if (result.status === 'success' && result.data) {
-                // The ideal case: server returns the full updated data.
-                const processedSavedData = processStudentData(result.data);
-                setStudents(processedSavedData);
-                setInitialStudents(processedSavedData);
-                setSyncStatus({ status: 'success', time: new Date(), lastAction: 'save' });
-            } else if (result.message && result.message.includes('filas actualizadas')) {
-                // Another success case: server confirms update but doesn't return data.
-                // We need to fetch the latest data to be sure.
-                setSyncStatus({ status: 'success', time: new Date(), lastAction: 'save', message: '¡Guardado! Actualizando datos...' });
-                await loadDataFromGoogleSheets();
-            } else {
-                // JSON, but not a success message we recognize.
-                throw new Error(result.message || 'El servidor devolvió una respuesta inesperada.');
-            }
-    
-        } catch (e) {
-            console.error("Failed to save data:", e);
-            const errorMessage = e instanceof Error ? e.message : "Error de red o del servidor.";
-            setSyncStatus({ status: 'error', time: new Date(), message: `Falló la sincronización. ${errorMessage}` });
-        }
-    };
+      setSyncStatus({ status: 'syncing', time: null, message: 'Verificando cambios remotos...' });
+  
+      try {
+          // 1. Fetch the latest data from the server
+          const response = await fetch(GOOGLE_SCRIPT_URL, { cache: 'no-store' });
+          if (!response.ok) {
+              throw new Error(`No se pudo obtener la última versión de los datos. Error de red: ${response.statusText}`);
+          }
+          const data = await response.json();
+          const latestStudentsRaw: any[] | null = Array.isArray(data) ? data : (data && Array.isArray(data.students)) ? data.students : null;
+  
+          if (latestStudentsRaw === null) {
+              throw new Error("Formato de datos remoto inválido.");
+          }
+          const latestStudents = processStudentData(latestStudentsRaw);
+  
+          // 2. Identify local changes by comparing current state with initial state
+          const locallyChangedIds = new Set<number>();
+          students.forEach(s => {
+              const original = initialStudents.find(o => o.id === s.id);
+              if (original && JSON.stringify(s) !== JSON.stringify(original)) {
+                  locallyChangedIds.add(s.id);
+              }
+          });
+  
+          if (locallyChangedIds.size === 0) {
+              setStudents(latestStudents);
+              setInitialStudents(latestStudents);
+              setSyncStatus({ status: 'success', time: new Date(), message: 'No había cambios locales para guardar. Datos actualizados.' });
+              return;
+          }
+  
+          // 3. Detect conflicts and prepare merged data
+          const conflicts: string[] = [];
+          const mergedStudents = latestStudents.map(latestStudent => {
+              const originalStudent = initialStudents.find(o => o.id === latestStudent.id);
+              const isLocallyChanged = locallyChangedIds.has(latestStudent.id);
+              const isRemotelyChanged = originalStudent && JSON.stringify(latestStudent) !== JSON.stringify(originalStudent);
+  
+              if (isLocallyChanged && isRemotelyChanged) {
+                  conflicts.push(latestStudent.name);
+              }
+  
+              // Local changes take precedence over remote ones for the merged data
+              return isLocallyChanged ? students.find(s => s.id === latestStudent.id)! : latestStudent;
+          });
+  
+          // 4. Handle conflicts
+          if (conflicts.length > 0) {
+              const conflictNames = conflicts.map(c => c).join(', ');
+              const proceed = window.confirm(
+                  `¡Atención! Mientras editabas, otra persona también guardó cambios para: ${conflictNames}.\n\n` +
+                  `Si continúas, tus cambios para estas estudiantes SOBRESCRIBIRÁN los cambios de la otra persona.\n\n` +
+                  `¿Deseas continuar y guardar tus cambios de todas formas?\n\n` +
+                  `RECOMENDADO: Haz clic en 'Cancelar', y la tabla se recargará con los datos más recientes. Luego podrás aplicar tus cambios de nuevo de forma segura.`
+              );
+              if (!proceed) {
+                  setSyncStatus({ status: 'error', time: new Date(), message: 'Guardado cancelado por conflicto.' });
+                  await loadDataFromGoogleSheets(); // Reload to show latest data
+                  return;
+              }
+          }
+  
+          // 5. Proceed with saving the merged data
+          setSyncStatus({ status: 'syncing', time: null, message: 'Guardando datos fusionados...' });
+  
+          const studentsToSave = mergedStudents.map(student => {
+              const totalPoints = student.courseProgress.reduce((sum, p) => sum + p, 0);
+              const status = calculateStatus(totalPoints, student.expectedPoints);
+              return {
+                  id: student.id,
+                  name: student.name,
+                  phone: student.phone,
+                  "Institución": student.institucion,
+                  "Departamento": student.departamento,
+                  courseProgress: student.courseProgress,
+                  identityVerified: student.identityVerified,
+                  twoFactorVerified: student.twoFactorVerified,
+                  certificateStatus: student.certificateStatus,
+                  finalCertificateStatus: student.finalCertificateStatus,
+                  dtvStatus: student.dtvStatus,
+                  totalPoints,
+                  expectedPoints: student.expectedPoints,
+                  status,
+                  "Ultima Modificacion": student.lastModification?.timestamp || null,
+                  "Puntos Actuales": student.lastModification?.previousTotalPoints ?? null,
+                  "Puntos Nuevos": student.lastModification?.newTotalPoints ?? null,
+              };
+          });
+  
+          const formData = new URLSearchParams();
+          formData.append('payload', JSON.stringify(studentsToSave));
+  
+          const saveResponse = await fetch(GOOGLE_SCRIPT_URL, {
+              method: 'POST',
+              body: formData,
+          });
+  
+          if (!saveResponse.ok) {
+              const errorText = await saveResponse.text();
+              throw new Error(`Error del servidor al guardar: ${saveResponse.status} ${errorText}`);
+          }
+  
+          setSyncStatus({ status: 'success', time: new Date(), lastAction: 'save', message: '¡Guardado con éxito! Actualizando...' });
+          await loadDataFromGoogleSheets(); // Always reload after a successful save
+  
+      } catch (e) {
+          console.error("Falló el proceso de guardado seguro:", e);
+          const errorMessage = e instanceof Error ? e.message : "Error de red o del servidor.";
+          setSyncStatus({ status: 'error', time: new Date(), message: `Falló la sincronización. ${errorMessage}` });
+      }
+  };
 
     const sortedStudents = useMemo(() => {
         const sorted = [...students].sort((a, b) => b.totalPoints - a.totalPoints);
@@ -619,7 +646,7 @@ const App: React.FC = () => {
     const handleClearSelectedStudent = () => setSelectedStudentId(null);
     
     const renderActiveView = () => {
-         if (isDataLoading) {
+         if (isDataLoading && students.length === 0) { // Only show full-screen loader on initial load
             return (
                 <div className="flex flex-col items-center justify-center h-64 text-center">
                     <svg className="animate-spin h-10 w-10 text-sky-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
