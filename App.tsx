@@ -324,6 +324,43 @@ const App: React.FC = () => {
       });
     }, [expectedPointsToday, calculateStatus]);
 
+    const loadDataFromGoogleSheets = useCallback(async () => {
+        setIsDataLoading(true);
+        setSyncStatus({ status: 'syncing', message: 'Cargando datos...', time: null });
+
+        try {
+            const response = await fetch(GOOGLE_SCRIPT_URL, { cache: 'no-store' });
+            if (!response.ok) {
+                throw new Error(`Error de red: ${response.statusText}`);
+            }
+            const data = await response.json();
+            
+            const fetchedStudentsRaw: any[] | null = Array.isArray(data) 
+                ? data 
+                : (data && Array.isArray(data.students)) 
+                    ? data.students 
+                    : null;
+
+             if (fetchedStudentsRaw !== null) {
+                const processedData = processStudentData(fetchedStudentsRaw);
+                setStudents(processedData);
+                setInitialStudents(processedData);
+                setSyncStatus({ status: 'success', time: new Date(), lastAction: 'load' });
+            } else {
+                 throw new Error("Formato de datos inválido desde Google Sheets");
+            }
+
+        } catch (error) {
+            console.error("Error al cargar desde Google Sheets:", error);
+            const errorMessage = error instanceof Error ? error.message : "Error de red o del servidor.";
+            setSyncStatus({ status: 'error', time: new Date(), message: `No se pudieron cargar los datos. ${errorMessage}` });
+            setStudents([]);
+            setInitialStudents([]);
+        } finally {
+            setIsDataLoading(false);
+        }
+    }, [processStudentData]);
+
     const handleSave = async () => {
         setSyncStatus({ status: 'syncing', time: null, message: 'Guardando...' });
     
@@ -367,24 +404,47 @@ const App: React.FC = () => {
     
             if (!response.ok) {
                 const errorText = await response.text();
-                throw new Error(`Error del servidor: ${errorText}`);
+                throw new Error(`Error del servidor: ${response.status} ${errorText}`);
             }
     
-            const result = await response.json();
-            if (result.status !== 'success') {
-                throw new Error(result.message || 'Error desconocido al guardar en Google Sheets');
+            const responseText = await response.text();
+            let result;
+    
+            try {
+                result = JSON.parse(responseText);
+            } catch (e) {
+                // Not a JSON response, might be plain text.
+                if (responseText.includes('filas actualizadas')) {
+                    // Treat as a success, but we need to fetch the latest data to be sure.
+                    setSyncStatus({ status: 'success', time: new Date(), lastAction: 'save', message: '¡Guardado! Actualizando datos...' });
+                    await loadDataFromGoogleSheets();
+                    return; // Exit after successful reload
+                }
+                // An unknown text response is an error.
+                throw new Error(`Respuesta inesperada del servidor: ${responseText}`);
             }
     
-            const processedSavedData = processStudentData(studentsToSave);
-            // La sincronización fue exitosa, actualizamos el estado base
-            setStudents(processedSavedData);
-            setInitialStudents(processedSavedData);
-            setSyncStatus({ status: 'success', time: new Date(), lastAction: 'save' });
+            // It is a valid JSON. Check its content.
+            if (result.status === 'success' && result.data) {
+                // The ideal case: server returns the full updated data.
+                const processedSavedData = processStudentData(result.data);
+                setStudents(processedSavedData);
+                setInitialStudents(processedSavedData);
+                setSyncStatus({ status: 'success', time: new Date(), lastAction: 'save' });
+            } else if (result.message && result.message.includes('filas actualizadas')) {
+                // Another success case: server confirms update but doesn't return data.
+                // We need to fetch the latest data to be sure.
+                setSyncStatus({ status: 'success', time: new Date(), lastAction: 'save', message: '¡Guardado! Actualizando datos...' });
+                await loadDataFromGoogleSheets();
+            } else {
+                // JSON, but not a success message we recognize.
+                throw new Error(result.message || 'El servidor devolvió una respuesta inesperada.');
+            }
     
         } catch (e) {
             console.error("Failed to save data:", e);
             const errorMessage = e instanceof Error ? e.message : "Error de red o del servidor.";
-            setSyncStatus({ status: 'error', time: new Date(), message: `Falló la sincronización. Los cambios no se guardaron. ${errorMessage}` });
+            setSyncStatus({ status: 'error', time: new Date(), message: `Falló la sincronización. ${errorMessage}` });
         }
     };
 
@@ -446,42 +506,6 @@ const App: React.FC = () => {
     }, [selectedStudent, schedule, today, getExpectedPointsForDate]);
 
 
-    const loadDataFromGoogleSheets = useCallback(async () => {
-        setIsDataLoading(true);
-        setSyncStatus({ status: 'syncing', message: 'Cargando datos...', time: null });
-
-        try {
-            const response = await fetch(GOOGLE_SCRIPT_URL, { cache: 'no-store' });
-            if (!response.ok) {
-                throw new Error(`Error de red: ${response.statusText}`);
-            }
-            const data = await response.json();
-            
-            const fetchedStudentsRaw: any[] | null = Array.isArray(data) 
-                ? data 
-                : (data && Array.isArray(data.students)) 
-                    ? data.students 
-                    : null;
-
-             if (fetchedStudentsRaw !== null) {
-                const processedData = processStudentData(fetchedStudentsRaw);
-                setStudents(processedData);
-                setInitialStudents(processedData);
-                setSyncStatus({ status: 'success', time: new Date(), lastAction: 'load' });
-            } else {
-                 throw new Error("Formato de datos inválido desde Google Sheets");
-            }
-
-        } catch (error) {
-            console.error("Error al cargar desde Google Sheets:", error);
-            const errorMessage = error instanceof Error ? error.message : "Error de red o del servidor.";
-            setSyncStatus({ status: 'error', time: new Date(), message: `No se pudieron cargar los datos. ${errorMessage}` });
-            setStudents([]);
-            setInitialStudents([]);
-        } finally {
-            setIsDataLoading(false);
-        }
-    }, [processStudentData]);
     
     useEffect(() => {
         loadDataFromGoogleSheets();
