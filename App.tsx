@@ -39,6 +39,7 @@ type SyncStatus = {
     time: Date | null;
     status: 'idle' | 'syncing' | 'success' | 'error';
     message?: string;
+    lastAction?: 'load' | 'save';
 };
 
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxiTI7pcAYDf9q21OoforACNDhzKS_ph0hb-C02VuFxd8n6vqJDbnsrluazMkv9r5705A/exec';
@@ -59,7 +60,7 @@ const SaveChangesHeader: React.FC<{
     let icon: React.ReactNode;
 
     if (isSyncing) {
-        statusText = 'Guardando...';
+        statusText = syncStatus.message || 'Guardando...';
         statusColor = 'text-sky-600';
         icon = <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
     } else if (syncStatus.status === 'error') {
@@ -71,9 +72,15 @@ const SaveChangesHeader: React.FC<{
         statusColor = 'text-amber-600';
         icon = <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>;
     } else {
-        statusText = 'Todos los cambios guardados';
-        statusColor = 'text-green-600';
-        icon = <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+        if (syncStatus.lastAction === 'save' && syncStatus.status === 'success') {
+            statusText = 'Todos los cambios guardados';
+            statusColor = 'text-green-600';
+            icon = <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+        } else {
+            statusText = 'Datos actualizados';
+            statusColor = 'text-gray-600';
+            icon = <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+        }
     }
 
     return (
@@ -84,7 +91,7 @@ const SaveChangesHeader: React.FC<{
               <p className="font-semibold text-gray-900">Guardar en Google Sheets</p>
               <p className={`text-sm ${statusColor}`}>
                   {statusText}
-                  {syncStatus.status === 'success' && !hasUnsavedChanges && ` - Última vez: ${formatSyncTime(syncStatus.time)}`}
+                  {(syncStatus.status === 'success' && !hasUnsavedChanges) && ` - Última vez: ${formatSyncTime(syncStatus.time)}`}
               </p>
             </div>
           </div>
@@ -108,7 +115,7 @@ const App: React.FC = () => {
     const [students, setStudents] = useState<Student[]>([]);
     const [initialStudents, setInitialStudents] = useState<Student[]>([]);
     const [activeView, setActiveView] = useState<ActiveView>('monitor');
-    const [syncStatus, setSyncStatus] = useState<SyncStatus>({ status: 'idle', time: null });
+    const [syncStatus, setSyncStatus] = useState<SyncStatus>({ status: 'idle', time: null, lastAction: 'load' });
     const [isDataLoading, setIsDataLoading] = useState(true);
     const [questions, setQuestions] = useState<CommunityQuestion[]>([]);
     const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
@@ -318,7 +325,7 @@ const App: React.FC = () => {
     }, [expectedPointsToday, calculateStatus]);
 
     const handleSave = async () => {
-        setSyncStatus({ status: 'syncing', time: null });
+        setSyncStatus({ status: 'syncing', time: null, message: 'Guardando...' });
     
         const studentsToSave = students.map(currentStudent => {
             const initialStudent = initialStudents.find(s => s.id === currentStudent.id);
@@ -369,11 +376,10 @@ const App: React.FC = () => {
             }
     
             const processedSavedData = processStudentData(studentsToSave);
-            // The save was successful, now we can update local storage and our state baseline
-            localStorage.setItem('studentData', JSON.stringify(processedSavedData));
+            // La sincronización fue exitosa, actualizamos el estado base
             setStudents(processedSavedData);
             setInitialStudents(processedSavedData);
-            setSyncStatus({ status: 'success', time: new Date() });
+            setSyncStatus({ status: 'success', time: new Date(), lastAction: 'save' });
     
         } catch (e) {
             console.error("Failed to save data:", e);
@@ -445,7 +451,7 @@ const App: React.FC = () => {
         setSyncStatus({ status: 'syncing', message: 'Cargando datos...', time: null });
 
         try {
-            const response = await fetch(GOOGLE_SCRIPT_URL);
+            const response = await fetch(GOOGLE_SCRIPT_URL, { cache: 'no-store' });
             if (!response.ok) {
                 throw new Error(`Error de red: ${response.statusText}`);
             }
@@ -461,7 +467,7 @@ const App: React.FC = () => {
                 const processedData = processStudentData(fetchedStudentsRaw);
                 setStudents(processedData);
                 setInitialStudents(processedData);
-                setSyncStatus({ status: 'success', time: new Date() });
+                setSyncStatus({ status: 'success', time: new Date(), lastAction: 'load' });
             } else {
                  throw new Error("Formato de datos inválido desde Google Sheets");
             }
