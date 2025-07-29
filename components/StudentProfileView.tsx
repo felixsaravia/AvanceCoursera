@@ -6,6 +6,7 @@ import ProgressChart from './ProgressChart';
 import { COURSE_SHORT_NAMES, TOTAL_MAX_POINTS } from '../constants';
 import AchievementBadge from './AchievementBadge';
 import TrophyBadge from './TrophyBadge';
+import MotivationalMessage from './MotivationalMessage';
 
 interface StudentProfileViewProps {
     student: Student;
@@ -117,13 +118,16 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, chartD
                     <p className="text-lg font-bold text-sky-600">{student.totalPoints} <span className="text-sm font-medium text-gray-500">/ {student.expectedPoints.toFixed(0)} puntos esperados</span></p>
                 </div>
             </div>
+            
+            {/* Motivational Message */}
+            <MotivationalMessage student={student} />
 
             {/* Catch Up Plan Card */}
             {catchUpPlan && Object.keys(catchUpPlan.groupedByCourse).length > 0 && (
-                <InfoCard title="Plan para Ponerse al Día">
+                <InfoCard title="Tu Plan de Acción Personalizado">
                     <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg mb-6">
                         <p className="font-bold text-amber-900">Necesitas aproximadamente {catchUpPlan.pointsNeeded} puntos para estar "Al Día".</p>
-                        <p className="text-sm text-amber-700">Concéntrate en los siguientes módulos para lograrlo:</p>
+                        <p className="text-sm text-amber-700">¡No te preocupes! Enfócate en los siguientes módulos para lograrlo. ¡Tú puedes!</p>
                     </div>
                     <div className="space-y-4">
                         {Object.entries(catchUpPlan.groupedByCourse).map(([courseName, modules]) => (

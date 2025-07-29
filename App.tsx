@@ -344,14 +344,12 @@ const App: React.FC = () => {
                 expectedPoints: currentStudent.expectedPoints,
                 status: status,
                 "Ultima Modificacion": finalLastModification?.timestamp || null,
-                "Puntos Actuales": finalLastModification?.previousTotalPoints ?? null, // Use "Puntos Actuales" to write
+                "Puntos Actuales": finalLastModification?.previousTotalPoints ?? null,
                 "Puntos Nuevos": finalLastModification?.newTotalPoints ?? null,
             };
         });
     
         try {
-            localStorage.setItem('studentData', JSON.stringify(students));
-    
             const formData = new URLSearchParams();
             formData.append('payload', JSON.stringify(studentsToSave));
     
@@ -371,6 +369,8 @@ const App: React.FC = () => {
             }
     
             const processedSavedData = processStudentData(studentsToSave);
+            // The save was successful, now we can update local storage and our state baseline
+            localStorage.setItem('studentData', JSON.stringify(processedSavedData));
             setStudents(processedSavedData);
             setInitialStudents(processedSavedData);
             setSyncStatus({ status: 'success', time: new Date() });
@@ -378,7 +378,7 @@ const App: React.FC = () => {
         } catch (e) {
             console.error("Failed to save data:", e);
             const errorMessage = e instanceof Error ? e.message : "Error de red o del servidor.";
-            setSyncStatus({ status: 'error', time: new Date(), message: `Guardado local, pero falló la sincronización: ${errorMessage}` });
+            setSyncStatus({ status: 'error', time: new Date(), message: `Falló la sincronización. Los cambios no se guardaron. ${errorMessage}` });
         }
     };
 
