@@ -10,56 +10,27 @@ interface LeaderboardTableProps {
   onUpdateProgress: (studentId: number, courseIndex: number, newProgress: number) => void;
   isReadOnly: boolean;
   currentCourseName: string;
-  currentModuleName: string;
-  currentModuleNumber: number;
   onSelectStudent: (studentId: number) => void;
+  onSort: (key: string) => void;
+  sortConfig: { key: string; direction: 'asc' | 'desc' };
+  onOpenReportModal: (studentId: number) => void;
 }
 
-const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, initialStudents, onUpdateProgress, isReadOnly, currentCourseName, currentModuleName, currentModuleNumber, onSelectStudent }) => {
+const SortIndicator = ({ direction }: { direction: 'asc' | 'desc' | null }) => {
+    if (direction === null) {
+        // Unsorted state icon: subtle up/down arrows
+        return <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 opacity-50 group-hover:opacity-100"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>;
+    }
+    if (direction === 'asc') {
+        // Ascending icon: up arrow
+        return <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-sky-600"><path d="m18 15-6-6-6 6"/></svg>;
+    }
+    // Descending icon: down arrow
+    return <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-sky-600"><path d="m6 9 6 6 6-6"/></svg>;
+};
+
+const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, initialStudents, onUpdateProgress, isReadOnly, currentCourseName, onSelectStudent, onSort, sortConfig, onOpenReportModal }) => {
   const [editingCell, setEditingCell] = useState<{ studentId: number; courseIndex: number } | null>(null);
-
-  const generateWhatsAppMessage = (student: Student): string => {
-      const name = student.name.split(' ')[0]; // Use first name for a personal but formal touch
-      const totalPoints = student.totalPoints;
-      const expectedPoints = Math.round(student.expectedPoints);
-      const status = student.status;
-
-      let header = `Estimada ${name}, 👋 le comparto su reporte de avance en la certificación de TI.\n\n`;
-      let body = `*Puntaje Actual:* ${totalPoints} puntos\n*Puntaje Esperado:* ${expectedPoints} puntos\n*Estado:* ${status}\n\n`;
-      let footer = '';
-
-      switch (status) {
-          case Status.Finalizada:
-              footer = "¡EXTRAORDINARIO! 🥳 Ha completado la certificación. Su dedicación y esfuerzo han dado frutos. ¡Muchas felicidades por este gran logro! 🏆";
-              break;
-          case Status.EliteII:
-          case Status.EliteI:
-              footer = "¡IMPRESIONANTE! 🚀 Lleva un ritmo excepcional, superando todas las expectativas. Es un verdadero ejemplo para el grupo. ¡Siga así, va directo al éxito! 🔥";
-              break;
-          case Status.Avanzada:
-              footer = "¡EXCELENTE! ✨ Va por delante del calendario, ¡qué gran trabajo! Su proactividad la está llevando muy lejos. ¡Mantenga ese impulso! 💪";
-              break;
-          case Status.AlDia:
-              footer = "¡MUY BIEN! 👍 Va al día con el programa. Está demostrando constancia y disciplina. ¡Siga con ese buen ritmo para alcanzar su meta! 🎯";
-              break;
-          case Status.Atrasada:
-              const pointsToCatchUp = Math.max(1, Math.round(student.expectedPoints - student.totalPoints));
-              footer = `¡Ánimo! 💪 Para ponerse "Al Día" necesita sumar ${pointsToCatchUp} puntos. Actualmente, el avance esperado corresponde al *Módulo ${currentModuleNumber}: ${currentModuleName}* del curso *"${currentCourseName}"*. ¡Enfóquese en esa lección para avanzar! ¡No se rinda, cada paso cuenta! ✨`;
-              break;
-          case Status.Riesgo:
-              const pointsToCatchUpRisk = Math.max(1, Math.round(student.expectedPoints - student.totalPoints));
-              footer = `¡No se preocupe, estamos para apoyarle! 🙏 Para ponerse "Al Día" necesita sumar ${pointsToCatchUpRisk} puntos. El enfoque actual, según el cronograma, es el *Módulo ${currentModuleNumber}: ${currentModuleName}* del curso *"${currentCourseName}"*. Si necesita ayuda, no dude en contactarme. ¡Confío en que lo logrará! 🤝`;
-              break;
-          case Status.SinIniciar:
-              footer = "¡Es hora de empezar esta increíble aventura! 🚀 El primer paso es el más importante. Entre a la plataforma y complete su primera lección. ¡Estamos emocionados de ver su progreso! 😊";
-              break;
-          default:
-              footer = "¡Siga adelante con sus estudios! Cada lección es un paso más hacia su meta. 💪";
-              break;
-      }
-
-      return `${header}${body}${footer}`;
-  };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>, studentId: number, courseIndex: number) => {
     let newProgress = parseInt(e.target.value, 10);
@@ -77,6 +48,19 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, initialSt
     }
   };
 
+  const SortableHeader: React.FC<{ sortKey: string; children: React.ReactNode; className?: string, title?: string }> = ({ sortKey, children, className, title }) => (
+    <th scope="col" className={`py-3.5 px-3 text-sm font-semibold text-gray-500 ${className}`} title={title}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className="group flex items-center gap-1.5 w-full hover:text-gray-900 transition-colors"
+      >
+        {children}
+        <SortIndicator direction={sortConfig.key === sortKey ? sortConfig.direction : null} />
+      </button>
+    </th>
+  );
+
 
   return (
     <div className="overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-lg custom-scrollbar">
@@ -84,25 +68,29 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, initialSt
         <thead className="bg-gray-50">
           <tr>
             <th scope="col" className="w-16 text-center py-3.5 px-3 text-sm font-semibold text-gray-500">#</th>
-            <th scope="col" className="py-3.5 px-3 text-left text-sm font-semibold text-gray-500">Nombre</th>
+            <SortableHeader sortKey="name" className="text-left">Nombre</SortableHeader>
             <th scope="col" className="w-16 text-center py-3.5 px-3 text-sm font-semibold text-gray-500"><span className="sr-only">Ver Perfil</span></th>
             <th scope="col" className="w-20 text-center py-3.5 px-3 text-sm font-semibold text-gray-500">Reporte</th>
-            <th scope="col" className="py-3.5 px-3 text-left text-sm font-semibold text-gray-500">Estado</th>
+            <SortableHeader sortKey="status" className="text-left">Estado</SortableHeader>
             {COURSE_SHORT_NAMES.map((name, i) => {
               const isCurrentCourse = COURSE_NAMES[i] === currentCourseName;
               return (
-                <th 
+                <SortableHeader 
                   key={i} 
-                  scope="col" 
-                  className={`text-center py-3.5 px-3 text-xs text-gray-500 whitespace-nowrap transition-colors ${isCurrentCourse ? 'bg-sky-100' : ''}`} title={COURSE_NAMES[i]}>
-                  <div className="font-semibold">Curso {i + 1}</div>
-                  <div className="font-normal mt-1">{name}</div>
-                </th>
+                  sortKey={`courseProgress.${i}`}
+                  className={`text-center whitespace-nowrap transition-colors ${isCurrentCourse ? 'bg-sky-100' : ''}`}
+                  title={COURSE_NAMES[i]}
+                >
+                  <div className="text-center w-full">
+                    <div className="font-semibold">Curso {i + 1}</div>
+                    <div className="font-normal mt-1">{name}</div>
+                  </div>
+                </SortableHeader>
               );
             })}
             <th scope="col" className="w-48 py-3.5 px-3 text-left text-sm font-semibold text-gray-500">Progreso Total</th>
-            <th scope="col" className="text-center py-3.5 px-3 text-sm font-semibold text-gray-500">Puntos</th>
-            <th scope="col" className="text-center py-3.5 px-3 text-sm font-semibold text-gray-500">Esperado</th>
+            <SortableHeader sortKey="totalPoints" className="text-center">Puntos</SortableHeader>
+            <SortableHeader sortKey="expectedPoints" className="text-center">Esperado</SortableHeader>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200 bg-white">
@@ -127,16 +115,14 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, initialSt
               </td>
               <td className="whitespace-nowrap text-center py-4 px-3">
                 {student.phone && (
-                    <a 
-                        href={`https://wa.me/${student.phone}?text=${encodeURIComponent(generateWhatsAppMessage(student))}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="Enviar reporte por WhatsApp"
+                     <button
+                        onClick={() => onOpenReportModal(student.id)}
+                        title="Abrir opciones de reporte"
                         className="inline-block text-green-600 hover:text-green-700 transition-colors"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                        <span className="sr-only">Enviar reporte a {student.name}</span>
-                    </a>
+                        <span className="sr-only">Opciones de reporte para {student.name}</span>
+                    </button>
                 )}
               </td>
               <td className="whitespace-nowrap py-4 px-3 text-sm"><StatusBadge status={student.status} /></td>
