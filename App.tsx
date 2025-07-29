@@ -13,6 +13,7 @@ import StatusSummary from './components/StatusSummary';
 import ScheduleView from './components/ScheduleView';
 import StudentProfileView from './components/StudentProfileView';
 import StatisticsView from './components/StatisticsView';
+import FilterControls from './components/FilterControls';
 
 const parseDateAsUTC = (dateString: string): Date => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
@@ -119,6 +120,11 @@ const App: React.FC = () => {
     const [isDataLoading, setIsDataLoading] = useState(true);
     const [questions, setQuestions] = useState<CommunityQuestion[]>([]);
     const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+    const [filters, setFilters] = useState({
+        institution: 'all',
+        department: 'all',
+        status: 'all'
+    });
     
     // Scroll to top when a student profile is opened
     useEffect(() => {
@@ -503,6 +509,25 @@ const App: React.FC = () => {
 
         return rankedStudents;
     }, [students]);
+
+    const uniqueInstitutions = useMemo(() => {
+        const allInstitutions = initialStudents.map(s => s.institucion).filter(Boolean) as string[];
+        return [...new Set(allInstitutions)].sort((a, b) => a.localeCompare(b));
+    }, [initialStudents]);
+
+    const uniqueDepartments = useMemo(() => {
+        const allDepartments = initialStudents.map(s => s.departamento).filter(Boolean) as string[];
+        return [...new Set(allDepartments)].sort((a, b) => a.localeCompare(b));
+    }, [initialStudents]);
+
+    const filteredAndSortedStudents = useMemo(() => {
+        return sortedStudents.filter(student => {
+            const institutionMatch = filters.institution === 'all' || student.institucion === filters.institution;
+            const departmentMatch = filters.department === 'all' || student.departamento === filters.department;
+            const statusMatch = filters.status === 'all' || student.status === filters.status;
+            return institutionMatch && departmentMatch && statusMatch;
+        });
+    }, [sortedStudents, filters]);
     
     const selectedStudent = useMemo(() => {
         return sortedStudents.find(s => s.id === selectedStudentId) || null;
@@ -649,6 +674,18 @@ const App: React.FC = () => {
         localStorage.setItem('communityQuestions', JSON.stringify(updatedQuestions));
     };
     
+    const handleFilterChange = (filterType: keyof typeof filters, value: string) => {
+        setFilters(prev => ({ ...prev, [filterType]: value }));
+    };
+
+    const resetFilters = () => {
+        setFilters({
+            institution: 'all',
+            department: 'all',
+            status: 'all'
+        });
+    };
+
     const handleSelectStudent = (studentId: number) => setSelectedStudentId(studentId);
     const handleClearSelectedStudent = () => setSelectedStudentId(null);
     
@@ -674,8 +711,18 @@ const App: React.FC = () => {
                             currentModuleNumber={currentModuleNumber}
                         />
                          <StatusSummary students={sortedStudents} />
+                         <FilterControls
+                            institutions={uniqueInstitutions}
+                            departments={uniqueDepartments}
+                            statuses={orderedStatuses}
+                            filters={filters}
+                            onFilterChange={handleFilterChange}
+                            onResetFilters={resetFilters}
+                            filteredCount={filteredAndSortedStudents.length}
+                            totalCount={sortedStudents.length}
+                        />
                         <LeaderboardTable 
-                            students={sortedStudents} 
+                            students={filteredAndSortedStudents} 
                             initialStudents={initialStudents}
                             onUpdateProgress={handleUpdateProgress} 
                             isReadOnly={false}
@@ -684,8 +731,8 @@ const App: React.FC = () => {
                             currentModuleNumber={currentModuleNumber}
                             onSelectStudent={handleSelectStudent}
                         />
-                        <AIAnalyzer students={sortedStudents} expectedPointsToday={expectedPointsToday} />
-                        <StatisticsView students={sortedStudents} />
+                        <AIAnalyzer students={filteredAndSortedStudents} expectedPointsToday={expectedPointsToday} />
+                        <StatisticsView students={filteredAndSortedStudents} />
                     </div>
                 );
             case 'schedule':
