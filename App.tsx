@@ -461,7 +461,6 @@ const App: React.FC = () => {
                 const processedData = processStudentData(fetchedStudentsRaw);
                 setStudents(processedData);
                 setInitialStudents(processedData);
-                localStorage.setItem('studentData', JSON.stringify(processedData));
                 setSyncStatus({ status: 'success', time: new Date() });
             } else {
                  throw new Error("Formato de datos inválido desde Google Sheets");
