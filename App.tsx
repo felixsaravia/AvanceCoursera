@@ -467,21 +467,11 @@ const App: React.FC = () => {
             }
 
         } catch (error) {
-            console.error("Error al cargar desde Google Sheets, usando datos locales:", error);
-            setSyncStatus({ status: 'error', time: new Date(), message: 'Error de red, usando datos locales.' });
-            const savedData = localStorage.getItem('studentData');
-            if (savedData) {
-                try {
-                    const parsedData = JSON.parse(savedData);
-                    if (Array.isArray(parsedData)) {
-                        const processedData = processStudentData(parsedData);
-                        setStudents(processedData);
-                        setInitialStudents(processedData);
-                    }
-                } catch (e) {
-                    console.error("Error parsing data from local storage", e);
-                }
-            }
+            console.error("Error al cargar desde Google Sheets:", error);
+            const errorMessage = error instanceof Error ? error.message : "Error de red o del servidor.";
+            setSyncStatus({ status: 'error', time: new Date(), message: `No se pudieron cargar los datos. ${errorMessage}` });
+            setStudents([]);
+            setInitialStudents([]);
         } finally {
             setIsDataLoading(false);
         }
