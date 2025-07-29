@@ -120,6 +120,13 @@ const App: React.FC = () => {
     const [questions, setQuestions] = useState<CommunityQuestion[]>([]);
     const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
     
+    // Scroll to top when a student profile is opened
+    useEffect(() => {
+        if (selectedStudentId !== null) {
+            window.scrollTo(0, 0);
+        }
+    }, [selectedStudentId]);
+
     const hasUnsavedChanges = useMemo(() => {
         return JSON.stringify(students) !== JSON.stringify(initialStudents);
     }, [students, initialStudents]);
