@@ -197,7 +197,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, chartD
             {catchUpPlan && Object.keys(catchUpPlan.groupedByCourse).length > 0 && (
                 <InfoCard title="Tu Plan de Acción Personalizado">
                     <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg mb-6">
-                        <p className="font-bold text-amber-900">Necesitas aproximadamente {catchUpPlan.pointsNeeded} puntos para estar "Al Día".</p>
+                        <p className="font-bold text-amber-900">Necesitas aproximadamente {catchUpPlan.pointsNeeded} puntos para alcanzar el "Puntaje Ideal".</p>
                         <p className="text-sm text-amber-700">¡No te preocupes! Enfócate en los siguientes módulos para lograrlo. ¡Tú puedes!</p>
                     </div>
                     <div className="space-y-4">
