@@ -1,6 +1,6 @@
 import React from 'react';
 import { Student } from '../types';
-import { COURSE_NAMES } from '../constants';
+import { COURSE_NAMES, COURSE_SHORT_NAMES } from '../constants';
 
 interface ReportModalProps {
     isOpen: boolean;
@@ -39,10 +39,6 @@ const ModalOptionButton: React.FC<{
 const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, student, generateWhatsAppLink, weeklyScheduleText, nextCourseDeadline }) => {
     if (!isOpen || !student) return null;
 
-    const coursesToRemind = student.courseProgress
-        .map((progress, index) => ({ progress, index }))
-        .filter(item => item.progress === 100 && !student.certificateStatus[item.index]);
-
     return (
         <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in" onClick={onClose}>
             <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
@@ -74,17 +70,6 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, student, gen
                         description="Mandar las actividades programadas para la semana."
                         href={generateWhatsAppLink(student, 'schedule', { scheduleText: weeklyScheduleText })}
                     />
-                    
-                    {coursesToRemind.map(course => (
-                        <ModalOptionButton
-                            key={`cert-reminder-${course.index}`}
-                            icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>}
-                            title="Recordar entregar Certificado"
-                            description={`Para el curso "${COURSE_NAMES[course.index]}"`}
-                            href={generateWhatsAppLink(student, 'certificate', { courseName: COURSE_NAMES[course.index] })}
-                        />
-                    ))}
-
                     {nextCourseDeadline && (
                          <ModalOptionButton
                             icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>}

@@ -3,10 +3,11 @@ import { Student, Status, ProcessedScheduleItem } from '../types';
 import StatusBadge from './StatusBadge';
 import RankBadge from './RankBadge';
 import ProgressChart from './ProgressChart';
-import { COURSE_SHORT_NAMES, TOTAL_MAX_POINTS } from '../constants';
+import { COURSE_SHORT_NAMES, TOTAL_MAX_POINTS, orderedStatuses } from '../constants';
 import AchievementBadge from './AchievementBadge';
 import TrophyBadge from './TrophyBadge';
 import MotivationalMessage from './MotivationalMessage';
+import NextStepAction from './NextStepAction';
 
 interface StudentProfileViewProps {
     student: Student;
@@ -92,6 +93,73 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, chartD
         };
     }, [student.status, student.totalPoints, student.expectedPoints, schedule]);
 
+    const nextStepData = useMemo(() => {
+        const { status, totalPoints, expectedPoints } = student;
+        if (status === Status.Finalizada) return null;
+
+        const ascendingStatuses: Status[] = ([...orderedStatuses] as Status[]).reverse();
+        const currentStatusIndex = ascendingStatuses.indexOf(status);
+        if (currentStatusIndex < 0) return null;
+
+        const getPointsToNextLevel = () => {
+            if (currentStatusIndex >= ascendingStatuses.indexOf(Status.EliteII)) {
+                return null;
+            }
+            
+            const nextStatusCand = ascendingStatuses[currentStatusIndex + 1];
+            let targetTotalPoints = 0;
+
+            if (status === Status.SinIniciar) targetTotalPoints = 1;
+            else if (status === Status.Riesgo) targetTotalPoints = Math.ceil(expectedPoints - 75);
+            else if (status === Status.Atrasada) targetTotalPoints = Math.ceil(expectedPoints - 25);
+            else if (status === Status.AlDia) targetTotalPoints = Math.ceil(expectedPoints + 1);
+            else if (status === Status.Avanzada) targetTotalPoints = Math.ceil(expectedPoints + 101);
+            else if (status === Status.EliteI) targetTotalPoints = Math.ceil(expectedPoints + 151);
+            else return null;
+
+            if (targetTotalPoints <= totalPoints) return null;
+
+            const pointsNeeded = targetTotalPoints - totalPoints;
+            let finalNextStatus = nextStatusCand;
+
+            if (status === Status.SinIniciar) {
+                 const diff = 1 - expectedPoints;
+                 if (diff > 150) finalNextStatus = Status.EliteII;
+                 else if (diff > 100) finalNextStatus = Status.EliteI;
+                 else if (diff > 0) finalNextStatus = Status.Avanzada;
+                 else if (diff >= -25) finalNextStatus = Status.AlDia;
+                 else if (diff < -75) finalNextStatus = Status.Riesgo;
+                 else finalNextStatus = Status.Atrasada;
+            }
+            
+            return { pointsNeeded, nextStatus: finalNextStatus };
+        };
+        
+        const nextLevelInfo = getPointsToNextLevel();
+        const pointsToFinal = TOTAL_MAX_POINTS - totalPoints;
+
+        const useNextLevel = nextLevelInfo && nextLevelInfo.pointsNeeded > 0 && (pointsToFinal <= 0 || nextLevelInfo.pointsNeeded < pointsToFinal);
+
+        if (useNextLevel) {
+             return {
+                pointsNeeded: nextLevelInfo.pointsNeeded,
+                currentStatus: status,
+                nextStatus: nextLevelInfo.nextStatus,
+            };
+        }
+
+        if (pointsToFinal > 0) {
+             return {
+                pointsNeeded: pointsToFinal,
+                currentStatus: status,
+                nextStatus: Status.Finalizada,
+            };
+        }
+
+        return null;
+
+    }, [student]);
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -121,6 +189,9 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, chartD
             
             {/* Motivational Message */}
             <MotivationalMessage student={student} />
+            
+            {/* Next Step Action */}
+            <NextStepAction data={nextStepData} />
 
             {/* Catch Up Plan Card */}
             {catchUpPlan && Object.keys(catchUpPlan.groupedByCourse).length > 0 && (

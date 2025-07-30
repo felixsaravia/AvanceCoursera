@@ -15,6 +15,8 @@ import StudentProfileView from './components/StudentProfileView';
 import StatisticsView from './components/StatisticsView';
 import FilterControls from './components/FilterControls';
 import ReportModal from './components/ReportModal';
+import { useNotifications } from './hooks/useNotifications';
+import NotificationBell from './components/NotificationBell';
 
 const parseDateAsUTC = (dateString: string): Date => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
@@ -134,6 +136,7 @@ const App: React.FC = () => {
     });
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
     const [reportModalStudentId, setReportModalStudentId] = useState<number | null>(null);
+    const { permission, sendNotification } = useNotifications();
     
     const reportModalStudent = useMemo(() => {
         return students.find(s => s.id === reportModalStudentId) || null;
@@ -320,32 +323,8 @@ const App: React.FC = () => {
     }, []);
 
     const processStudentData = useCallback((studentsToProcess: any[]): Student[] => {
-      const parseArray = (data: any, expectedLength: number, defaultValue: any): any[] => {
-          let arr: any[] = [];
-          if (Array.isArray(data)) {
-              arr = [...data];
-          } else if (typeof data === 'string' && data.startsWith('[')) {
-              try {
-                  const parsed = JSON.parse(data);
-                  if (Array.isArray(parsed)) {
-                      arr = parsed;
-                  }
-              } catch (e) {
-                  // Fallback to default if parsing fails, let the padding logic handle it
-              }
-          }
-          
-          // Pad or truncate to the expected length
-          while (arr.length < expectedLength) {
-              arr.push(defaultValue);
-          }
-          return arr.slice(0, expectedLength);
-      };
-
       return studentsToProcess.map((s, index) => {
-          const courseProgress = parseArray(s.courseProgress, TOTAL_COURSES, 0).map(p => Number(p) || 0);
-          const certificateStatus = parseArray(s.certificateStatus, TOTAL_COURSES, false).map(c => c === true || c === 'TRUE');
-
+          const courseProgress = s.courseProgress || Array(TOTAL_COURSES).fill(0);
           const totalPoints = courseProgress.reduce((sum, p) => sum + p, 0);
           const expectedPoints = expectedPointsToday;
           const status = calculateStatus(totalPoints, expectedPoints);
@@ -353,7 +332,7 @@ const App: React.FC = () => {
           let lastModification: LastModification | undefined = undefined;
 
           const timestamp = s["Ultima Modificacion"];
-          const prevPoints = s["Puntos Actuales"];
+          const prevPoints = s["Puntos Actuales"]; // Use "Puntos Actuales" to read
           const newPoints = s["Puntos Nuevos"];
 
           if (timestamp && typeof timestamp === 'string') {
@@ -377,11 +356,11 @@ const App: React.FC = () => {
               totalPoints,
               expectedPoints,
               status,
-              identityVerified: s.identityVerified === true || s.identityVerified === 'TRUE',
-              twoFactorVerified: s.twoFactorVerified === true || s.twoFactorVerified === 'TRUE',
-              certificateStatus,
-              finalCertificateStatus: s.finalCertificateStatus === true || s.finalCertificateStatus === 'TRUE',
-              dtvStatus: s.dtvStatus === true || s.dtvStatus === 'TRUE',
+              identityVerified: s.identityVerified ?? false,
+              twoFactorVerified: s.twoFactorVerified ?? false,
+              certificateStatus: s.certificateStatus || Array(TOTAL_COURSES).fill(false),
+              finalCertificateStatus: s.finalCertificateStatus ?? false,
+              dtvStatus: s.dtvStatus ?? false,
               lastModification,
           };
           return student;
@@ -704,6 +683,28 @@ const App: React.FC = () => {
         };
     }, [schedule, today]);
 
+    // Notification for upcoming deadlines
+    useEffect(() => {
+        if (permission === 'granted' && nextCourseDeadline) {
+            const deadlineDate = parseDateAsUTC(nextCourseDeadline.date);
+            const todayDate = getTodayInElSalvador();
+            const diffTime = deadlineDate.getTime() - todayDate.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            const notificationKey = `deadline-notif-${nextCourseDeadline.date}`;
+            const lastNotified = localStorage.getItem(notificationKey);
+            const todayString = todayDate.toISOString().split('T')[0];
+
+            if (diffDays > 0 && diffDays <= 3 && lastNotified !== todayString) {
+                sendNotification(
+                    'Fecha Límite Próxima', 
+                    `La fecha límite para "${nextCourseDeadline.courseName}" es en ${diffDays} día(s).`
+                );
+                localStorage.setItem(notificationKey, todayString);
+            }
+        }
+    }, [permission, nextCourseDeadline, sendNotification, today]);
+
     const generateWhatsAppLink = useCallback((student: Student, type: string, data?: any): string => {
         if (!student.phone) return '#';
         const name = student.name.split(' ')[0];
@@ -798,11 +799,21 @@ const App: React.FC = () => {
             prev.map(s => {
                 if (s.id === studentId) {
                     const previousTotalPoints = s.totalPoints;
+                    const oldStatus = s.status;
+
                     const newCourseProgress = [...s.courseProgress];
                     newCourseProgress[courseIndex] = newProgress;
                     
                     const newTotalPoints = newCourseProgress.reduce((sum, p) => sum + p, 0);
                     const newStatus = calculateStatus(newTotalPoints, s.expectedPoints);
+
+                    // Notification Logic
+                    if (oldStatus !== newStatus && newStatus === Status.Riesgo) {
+                        sendNotification('Estudiante en Riesgo', `${s.name} ha entrado en estado de "En Riesgo".`);
+                    }
+                    if (previousTotalPoints < TOTAL_MAX_POINTS && newTotalPoints === TOTAL_MAX_POINTS) {
+                        sendNotification('¡Certificación Completada!', `¡Felicidades! ${s.name} ha completado la certificación.`);
+                    }
 
                     const lastModification: LastModification = {
                         timestamp: new Date().toISOString(),
@@ -996,8 +1007,13 @@ const App: React.FC = () => {
         <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pb-28">
             {activeView === 'monitor' && !selectedStudent && (
                 <div className="mb-8 text-left">
-                    <h1 className="text-4xl font-extrabold text-gray-900">Monitor de Avance <span className="text-sky-600 font-bold">Google IT Support</span></h1>
-                    <p className="text-lg text-gray-500 mt-2">Registro de puntajes y estado de la certificación en tiempo real.</p>
+                    <div className="flex justify-between items-start">
+                        <div className="flex-grow">
+                            <h1 className="text-4xl font-extrabold text-gray-900">Monitor de Avance <span className="text-sky-600 font-bold">Google IT Support</span></h1>
+                            <p className="text-lg text-gray-500 mt-2">Registro de puntajes y estado de la certificación en tiempo real.</p>
+                        </div>
+                        <NotificationBell />
+                    </div>
                 </div>
             )}
             {activeView === 'schedule' && !selectedStudent && (

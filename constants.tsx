@@ -43,7 +43,7 @@ export const STUDENT_PHONE_NUMBERS: { [key: string]: string } = {
     "Ana Milena Cortez Linares": "50378468848",
     "María José Peraza Peña": "50376527140",
     "Rebeca Michelle Castro Pineda": "50371981227",
-    "Alejandra Lisbeth Zavala Calles": "50375417276",
+    "Alejandra Lisbeth Zavala Calles": "50375417274",
     "Gabriela Alexandra Alvayeros Guirola": "50370464925"
 };
 
