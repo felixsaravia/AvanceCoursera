@@ -21,7 +21,8 @@ export const MOCK_NAMES: string[] = [
     "Tania Abigail Barahona Fuentes",
     "Tanya Gabriela González Ramírez",
     "María José Peraza Peña",
-    "Gabriela Alexandra Alvayeros Guirola"
+    "Gabriela Alexandra Alvayeros Guirola",
+     "Milena Martiana Vasquez Aquino"
 ];
 
 export const STUDENT_PHONE_NUMBERS: { [key: string]: string } = {
@@ -44,7 +45,8 @@ export const STUDENT_PHONE_NUMBERS: { [key: string]: string } = {
     "María José Peraza Peña": "50376527140",
     "Rebeca Michelle Castro Pineda": "50371981227",
     "Alejandra Lisbeth Zavala Calles": "50375417274",
-    "Gabriela Alexandra Alvayeros Guirola": "50370464925"
+    "Gabriela Alexandra Alvayeros Guirola": "50370464925",
+    "Milena Martiana Vasquez Aquino": "50376606559"
 };
 
 export const STUDENT_INSTITUTIONS: { [key: string]: string } = {
@@ -66,7 +68,8 @@ export const STUDENT_INSTITUTIONS: { [key: string]: string } = {
     "Gabriela Alexandra Alvayeros Guirola": "ITCA FEPADE",
     "Alejandra Lisbeth Zavala Calles": "Universidad Gerardo Barrios",
     "Isabella Gavidia Molina": "Escuela Bilingüe Maquilishuat",
-    "Katherine Alexandra Hernández Suriano": "ESFE"
+    "Katherine Alexandra Hernández Suriano": "ESFE",
+    "Milena Martiana Vasquez Aquino": "N/A"
 };
 
 export const STUDENT_DEPARTMENTS: { [key: string]: string } = {
@@ -88,7 +91,8 @@ export const STUDENT_DEPARTMENTS: { [key: string]: string } = {
     "Gabriela Alexandra Alvayeros Guirola": "Sonsonate",
     "Alejandra Lisbeth Zavala Calles": "La Unión",
     "Isabella Gavidia Molina": "La Libertad",
-    "Katherine Alexandra Hernández Suriano": "Sonsonate"
+    "Katherine Alexandra Hernández Suriano": "Sonsonate",
+    "Milena Martiana Vasquez Aquino": "Sonsonate"
 };
 
 
