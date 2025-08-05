@@ -97,6 +97,11 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, student, gen
     const [actionType, setActionType] = useState<'felicitar' | 'felicitar_iniciar' | 'recordar_certificado' | null>(null);
     const [selectedCerts, setSelectedCerts] = useState<number[]>([]);
 
+    const [isPinVerified, setIsPinVerified] = useState(false);
+    const [pinInput, setPinInput] = useState('');
+    const [pinError, setPinError] = useState('');
+    const CORRECT_PIN = '2450';
+
     useEffect(() => {
         if (!isOpen) {
             // Reset state after transition
@@ -104,10 +109,24 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, student, gen
                 setView('main');
                 setActionType(null);
                 setSelectedCerts([]);
+                setIsPinVerified(false);
+                setPinInput('');
+                setPinError('');
             }, 300);
             return () => clearTimeout(timer);
         }
     }, [isOpen]);
+    
+    const handlePinSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (pinInput === CORRECT_PIN) {
+            setIsPinVerified(true);
+            setPinError('');
+        } else {
+            setPinError('PIN incorrecto. Inténtalo de nuevo.');
+            setPinInput('');
+        }
+    };
 
     if (!isOpen || !student) return null;
 
@@ -141,7 +160,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, student, gen
     };
 
     const renderMainView = () => (
-        <div className="space-y-3">
+        <div className="space-y-3 animate-fade-in">
              <ModalOptionButton
                 icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4V2h10v2"/><path d="M12 18.5 9 22l3-1.5 3 1.5-3-3.5"/><path d="M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z"/><path d="M12 15v3.5"/></svg>}
                 title="Felicitar"
@@ -203,7 +222,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, student, gen
     );
 
     const renderSelectCourseView = () => (
-        <div>
+        <div className="animate-fade-in">
            <button onClick={handleBack} className="flex items-center gap-1 text-sm font-semibold text-sky-600 hover:text-sky-500 mb-4">
                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                Volver
@@ -234,7 +253,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, student, gen
         })).filter(c => c.isCompleted && !c.isSubmitted);
 
         return (
-            <div>
+            <div className="animate-fade-in">
                 <button onClick={handleBack} className="flex items-center gap-1 text-sm font-semibold text-sky-600 hover:text-sky-500 mb-4">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                     Volver
@@ -272,29 +291,67 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, student, gen
         );
     };
 
+    const pinForm = (
+        <form onSubmit={handlePinSubmit} className="space-y-4 animate-fade-in">
+            <div className="text-center">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto text-gray-400"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            </div>
+            <div>
+                <label htmlFor="pin-input" className="block text-sm font-medium text-center text-gray-700">
+                    Ingresa el PIN de seguridad para continuar
+                </label>
+                <input
+                    type="password"
+                    id="pin-input"
+                    value={pinInput}
+                    onChange={(e) => setPinInput(e.target.value)}
+                    className="mt-2 block w-full text-center tracking-[1em] px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-lg"
+                    autoFocus
+                    maxLength={4}
+                    pattern="\d*"
+                    autoComplete="one-time-code"
+                />
+            </div>
+            {pinError && <p className="text-sm text-center text-red-600">{pinError}</p>}
+            <button
+                type="submit"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:opacity-50"
+                disabled={pinInput.length < 4}
+            >
+                Verificar
+            </button>
+        </form>
+    );
+
     const viewSubtitles: {[key: string]: string} = {
         main: 'Selecciona una acción rápida',
         select_course: 'Selecciona el curso a felicitar',
         select_certificate: 'Selecciona los certificados pendientes'
     };
+    
+    const subtitle = isPinVerified ? viewSubtitles[view] : 'PIN de seguridad requerido';
 
     return (
         <div className={`fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`} onClick={onClose}>
             <div className={`bg-white rounded-xl shadow-2xl p-6 w-full max-w-md transition-all duration-300 ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`} onClick={e => e.stopPropagation()}>
-                <div className="flex justify-between items-center mb-6">
+                <div className="flex justify-between items-start mb-6">
                     <div>
                         <h3 className="text-xl font-bold text-gray-900">Contactar a {student.name.split(' ')[0]}</h3>
                         <p className="text-sm text-gray-500">
-                             {viewSubtitles[view]}
+                             {subtitle}
                         </p>
                     </div>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 rounded-full p-1 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                     </button>
                 </div>
-                {view === 'main' && renderMainView()}
-                {view === 'select_course' && renderSelectCourseView()}
-                {view === 'select_certificate' && renderSelectCertificateView()}
+                {!isPinVerified ? pinForm : (
+                    <>
+                        {view === 'main' && renderMainView()}
+                        {view === 'select_course' && renderSelectCourseView()}
+                        {view === 'select_certificate' && renderSelectCertificateView()}
+                    </>
+                )}
             </div>
         </div>
     );
