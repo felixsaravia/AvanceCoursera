@@ -129,10 +129,14 @@ const App: React.FC = () => {
     const [isDataLoading, setIsDataLoading] = useState(true);
     const [questions, setQuestions] = useState<CommunityQuestion[]>([]);
     const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
-    const [filters, setFilters] = useState({
-        institution: 'all',
-        department: 'all',
-        status: 'all'
+    const [filters, setFilters] = useState<{
+        institutions: string[];
+        departments: string[];
+        statuses: Status[];
+    }>({
+        institutions: [],
+        departments: [],
+        statuses: [],
     });
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
     const [reportModalStudentId, setReportModalStudentId] = useState<number | null>(null);
@@ -538,9 +542,9 @@ const App: React.FC = () => {
 
     const filteredStudents = useMemo(() => {
         return rankedStudents.filter(student => {
-            const institutionMatch = filters.institution === 'all' || student.institucion === filters.institution;
-            const departmentMatch = filters.department === 'all' || student.departamento === filters.department;
-            const statusMatch = filters.status === 'all' || student.status === filters.status;
+            const institutionMatch = filters.institutions.length === 0 || (student.institucion && filters.institutions.includes(student.institucion));
+            const departmentMatch = filters.departments.length === 0 || (student.departamento && filters.departments.includes(student.departamento));
+            const statusMatch = filters.statuses.length === 0 || filters.statuses.includes(student.status);
             return institutionMatch && departmentMatch && statusMatch;
         });
     }, [rankedStudents, filters]);
@@ -754,18 +758,37 @@ const App: React.FC = () => {
             case 'blank':
                 message = '';
                 break;
+            case 'felicitar':
+                const { courseName: congratulateCourseName } = data;
+                message = `¡Felicidades, ${name}! 🥳 Ha completado con éxito el curso "${congratulateCourseName}". Su dedicación es inspiradora. ¡Siga así! 🎉`;
+                break;
+            case 'felicitar_iniciar':
+                const { courseName: completedCourseName, courseIndex } = data;
+                const nextCourseIndex = courseIndex + 1;
+                if (nextCourseIndex < COURSE_NAMES.length) {
+                    const nextCourseName = COURSE_NAMES[nextCourseIndex];
+                    message = `¡Extraordinario trabajo, ${name}! 🥳 Ha completado el curso "${completedCourseName}". ¡Felicidades! 🚀\n\nAhora es el momento perfecto para dar el siguiente paso. Le animo a iniciar con el curso: *"${nextCourseName}"*.\n\n¡Vamos a por la siguiente meta! 💪`;
+                } else {
+                    message = `¡Increíble, ${name}! 🥳 Ha completado el curso "${completedCourseName}". ¡Y con este, ha finalizado toda la ruta de aprendizaje! ¡Muchísimas felicidades por este gran logro! 🏆`;
+                }
+                break;
             case 'certificate':
                 const { courseName } = data;
-                message = `¡Felicidades, ${name}! 🥳 Has completado el curso "${courseName}".\n\nPor favor, no olvides subir tu certificado a la carpeta de Drive para que podamos registrarlo. ¡Estás un paso más cerca de la meta! 🚀\n\nEnlace a Drive: https://drive.google.com/drive/folders/18xkVPEYMjsZDAIutOVclhyMNdfwYhQb5?usp=drive_link`;
+                message = `¡Felicidades, ${name}! 🥳 Ha completado el curso "${courseName}".\n\nPor favor, no olvide subir su certificado a la carpeta de Drive para que podamos registrarlo. ¡Está un paso más cerca de la meta! 🚀\n\nEnlace a Drive: https://drive.google.com/drive/folders/18xkVPEYMjsZDAIutOVclhyMNdfwYhQb5?usp=drive_link`;
+                break;
+            case 'recordar_certificado':
+                const { courseNames } = data;
+                const coursesList = courseNames.map(name => `- "${name}"`).join('\n');
+                message = `Hola, ${name}. 👋 Un recordatorio amistoso para que por favor suba los certificados de los siguientes cursos que ya ha completado:\n\n${coursesList}\n\nPuede subirlos en la siguiente carpeta de Drive. ¡Gracias!\n\nEnlace: https://drive.google.com/drive/folders/18xkVPEYMjsZDAIutOVclhyMNdfwYhQb5?usp=drive_link`;
                 break;
             case 'verification':
                 const { pending } = data;
                 const pendingText = pending.join(' y ');
-                message = `Hola, ${name}. 👋 Te recordamos amablemente completar los siguientes pasos de verificación en tu cuenta para asegurar tu progreso:\n\n*${pendingText}*\n\nCompletar esto es muy importante. ¡Gracias! 😊`;
+                message = `Hola, ${name}. 👋 Le recordamos amablemente completar los siguientes pasos de verificación en su cuenta para asegurar su progreso:\n\n*${pendingText}*\n\nCompletar esto es muy importante. ¡Gracias! 😊`;
                 break;
             case 'schedule':
                 const { scheduleText } = data;
-                message = `Hola, ${name}. 📅 Aquí tienes el cronograma sugerido para esta semana para que te mantengas al día:\n\n${scheduleText}\n\n¡Organízate y a seguir aprendiendo! 💪`;
+                message = `Hola, ${name}. 📅 Aquí tiene el cronograma sugerido para esta semana para que se mantenga al día:\n\n${scheduleText}\n\n¡Organícese y a seguir aprendiendo! 💪`;
                 break;
             case 'deadline':
                 const { deadline } = data;
@@ -895,17 +918,20 @@ const App: React.FC = () => {
         localStorage.setItem('communityQuestions', JSON.stringify(updatedQuestions));
     };
     
-    const handleFilterChange = (filterType: keyof typeof filters, value: string) => {
-        setFilters(prev => ({ ...prev, [filterType]: value }));
-    };
+    const handleFilterChange = useCallback((filterType: keyof typeof filters, selectedOptions: string[]) => {
+      setFilters(prev => ({
+        ...prev,
+        [filterType]: selectedOptions,
+      }));
+    }, []);
 
-    const resetFilters = () => {
+    const resetFilters = useCallback(() => {
         setFilters({
-            institution: 'all',
-            department: 'all',
-            status: 'all'
+            institutions: [],
+            departments: [],
+            statuses: []
         });
-    };
+    }, []);
 
     const handleSelectStudent = (studentId: number) => setSelectedStudentId(studentId);
     const handleClearSelectedStudent = () => setSelectedStudentId(null);

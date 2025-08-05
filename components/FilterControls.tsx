@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Status } from '../types';
 
 interface FilterControlsProps {
@@ -6,15 +6,88 @@ interface FilterControlsProps {
     departments: string[];
     statuses: Status[];
     filters: {
-        institution: string;
-        department: string;
-        status: string;
+        institutions: string[];
+        departments: string[];
+        statuses: Status[];
     };
-    onFilterChange: (filterType: keyof FilterControlsProps['filters'], value: string) => void;
+    onFilterChange: (filterType: keyof FilterControlsProps['filters'], value: string[]) => void;
     onResetFilters: () => void;
     filteredCount: number;
     totalCount: number;
 }
+
+const MultiSelectDropdown: React.FC<{
+    options: string[];
+    selectedOptions: string[];
+    onSelectionChange: (selected: string[]) => void;
+    label: string;
+    id: string;
+}> = ({ options, selectedOptions, onSelectionChange, label, id }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const handleToggleOption = (option: string) => {
+        const newSelection = selectedOptions.includes(option)
+            ? selectedOptions.filter(o => o !== option)
+            : [...selectedOptions, option];
+        onSelectionChange(newSelection);
+    };
+
+    const selectAll = () => onSelectionChange(options);
+    const clearAll = () => onSelectionChange([]);
+    
+    const displayLabel = selectedOptions.length > 0 ? `${selectedOptions.length} seleccionados` : `Todos los ${label.toLowerCase()}`;
+
+    return (
+        <div className="relative" ref={dropdownRef}>
+            <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
+            <button
+                type="button"
+                id={id}
+                onClick={() => setIsOpen(!isOpen)}
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-white text-gray-900 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md text-left flex justify-between items-center"
+            >
+                <span>{displayLabel}</span>
+                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            {isOpen && (
+                <div className="absolute z-10 mt-1 w-full bg-white shadow-lg border border-gray-200 rounded-md max-h-60 overflow-hidden flex flex-col">
+                    <div className="p-2 border-b border-gray-200 flex gap-2">
+                        <button onClick={selectAll} className="flex-1 text-xs text-center px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded">Todos</button>
+                        <button onClick={clearAll} className="flex-1 text-xs text-center px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded">Ninguno</button>
+                    </div>
+                    <ul className="overflow-y-auto py-1">
+                        {options.map(option => (
+                            <li key={option}
+                                className="px-3 py-2 text-sm text-gray-900 hover:bg-sky-50 cursor-pointer flex items-center gap-3"
+                                onClick={() => handleToggleOption(option)}
+                            >
+                               <input
+                                    type="checkbox"
+                                    checked={selectedOptions.includes(option)}
+                                    onChange={() => {}}
+                                    className="h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500 pointer-events-none"
+                                />
+                                <span>{option}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+};
+
 
 const FilterControls: React.FC<FilterControlsProps> = ({
     institutions,
@@ -26,16 +99,30 @@ const FilterControls: React.FC<FilterControlsProps> = ({
     filteredCount,
     totalCount
 }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const hasActiveFilters = filters.institution !== 'all' || filters.department !== 'all' || filters.status !== 'all';
+    const [isAccordionOpen, setIsAccordionOpen] = useState(false);
+    const [overflowClass, setOverflowClass] = useState('overflow-hidden');
+    const hasActiveFilters = filters.institutions.length > 0 || filters.departments.length > 0 || filters.statuses.length > 0;
+
+    useEffect(() => {
+        if (isAccordionOpen) {
+            // After transition, allow overflow so dropdowns can pop out
+            const timer = setTimeout(() => {
+                setOverflowClass('overflow-visible');
+            }, 500); // Must match the transition duration
+            return () => clearTimeout(timer);
+        } else {
+            // When closing, immediately hide overflow to enable animation
+            setOverflowClass('overflow-hidden');
+        }
+    }, [isAccordionOpen]);
 
     return (
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm relative z-30">
             {/* Accordion Header */}
             <button
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => setIsAccordionOpen(!isAccordionOpen)}
                 className="w-full flex justify-between items-center p-4 text-left hover:bg-gray-50/50 transition-colors rounded-lg"
-                aria-expanded={isOpen}
+                aria-expanded={isAccordionOpen}
             >
                 <div className="flex items-center gap-3">
                      <span className={`p-2 rounded-full transition-colors ${hasActiveFilters ? 'bg-sky-100 text-sky-600' : 'bg-gray-100 text-gray-600'}`}>
@@ -63,66 +150,37 @@ const FilterControls: React.FC<FilterControlsProps> = ({
                     strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className={`transform transition-transform duration-300 text-gray-500 ${isOpen ? 'rotate-180' : 'rotate-0'}`}
+                    className={`transform transition-transform duration-300 text-gray-500 ${isAccordionOpen ? 'rotate-180' : 'rotate-0'}`}
                 >
                     <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
             </button>
 
             {/* Collapsible Content */}
-            <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[500px]' : 'max-h-0'}`}>
+            <div className={`transition-all duration-500 ease-in-out ${overflowClass} ${isAccordionOpen ? 'max-h-[500px]' : 'max-h-0'}`}>
                 <div className="p-4 border-t border-gray-200 space-y-4">
                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {/* Institution Filter */}
-                        <div>
-                            <label htmlFor="institution-filter" className="block text-sm font-medium text-gray-700">
-                                Institución
-                            </label>
-                            <select
-                                id="institution-filter"
-                                name="institution"
-                                className="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-white text-gray-900 border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md"
-                                value={filters.institution}
-                                onChange={(e) => onFilterChange('institution', e.target.value)}
-                            >
-                                <option value="all">Todas las instituciones</option>
-                                {institutions.map(inst => <option key={inst} value={inst}>{inst}</option>)}
-                            </select>
-                        </div>
-                        
-                        {/* Department Filter */}
-                        <div>
-                            <label htmlFor="department-filter" className="block text-sm font-medium text-gray-700">
-                                Departamento
-                            </label>
-                            <select
-                                id="department-filter"
-                                name="department"
-                                className="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-white text-gray-900 border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md"
-                                value={filters.department}
-                                onChange={(e) => onFilterChange('department', e.target.value)}
-                            >
-                                <option value="all">Todos los departamentos</option>
-                                {departments.map(dept => <option key={dept} value={dept}>{dept}</option>)}
-                            </select>
-                        </div>
-
-                        {/* Status Filter */}
-                        <div>
-                            <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700">
-                                Estado
-                            </label>
-                            <select
-                                id="status-filter"
-                                name="status"
-                                className="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-white text-gray-900 border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md"
-                                value={filters.status}
-                                onChange={(e) => onFilterChange('status', e.target.value)}
-                            >
-                                <option value="all">Todos los estados</option>
-                                {statuses.map(stat => <option key={stat} value={stat}>{stat}</option>)}
-                            </select>
-                        </div>
+                        <MultiSelectDropdown
+                            id="institution-filter"
+                            label="Institución"
+                            options={institutions}
+                            selectedOptions={filters.institutions}
+                            onSelectionChange={(selected) => onFilterChange('institutions', selected)}
+                        />
+                        <MultiSelectDropdown
+                            id="department-filter"
+                            label="Departamento"
+                            options={departments}
+                            selectedOptions={filters.departments}
+                            onSelectionChange={(selected) => onFilterChange('departments', selected)}
+                        />
+                         <MultiSelectDropdown
+                            id="status-filter"
+                            label="Estado"
+                            options={statuses}
+                            selectedOptions={filters.statuses}
+                            onSelectionChange={(selected) => onFilterChange('statuses', selected)}
+                        />
                         
                         {/* Reset Button */}
                         <div className="flex items-end">
