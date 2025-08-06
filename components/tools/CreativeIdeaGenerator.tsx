@@ -58,7 +58,12 @@ const MotivationalBoostGenerator: React.FC = () => {
                 model: 'gemini-2.5-flash',
                 contents: prompt,
             });
-            setMotivation(result.text);
+            const text = result.text;
+            if (text && text.trim()) {
+                setMotivation(text.trim());
+            } else {
+                setError('La IA no generó una respuesta. Esto puede deberse a filtros de seguridad o a un problema temporal. Por favor, inténtelo de nuevo.');
+            }
         } catch (err) {
             console.error(err);
             setError('Hubo un error al generar el mensaje. Por favor, inténtalo de nuevo.');

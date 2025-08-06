@@ -80,7 +80,12 @@ const AIImageQuery: React.FC = () => {
                 model: 'gemini-2.5-flash',
                 contents: { parts: [imagePart, textPart] },
             });
-            setResponse(result.text);
+            const text = result.text;
+            if (text && text.trim()) {
+                setResponse(text.trim());
+            } else {
+                setError('La IA no pudo procesar la imagen o la pregunta. Inténtalo de nuevo.');
+            }
 
         } catch (err) {
             console.error(err);

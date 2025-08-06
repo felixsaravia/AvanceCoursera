@@ -27,7 +27,12 @@ const AIInterviewSimulator: React.FC = () => {
             model: 'gemini-2.5-flash',
             contents: prompt,
         });
-        return result.text;
+        const text = result.text;
+        if (text && text.trim()) {
+            return text.trim();
+        } else {
+            throw new Error('La IA no generó una respuesta. Esto puede deberse a filtros de seguridad. Por favor, intenta de nuevo o reformula tu respuesta.');
+        }
     };
 
     const startInterview = async () => {

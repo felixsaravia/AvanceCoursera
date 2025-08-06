@@ -55,7 +55,12 @@ const AIAnalyzer: React.FC<AIAnalyzerProps> = ({ students, expectedPointsToday }
           systemInstruction,
         },
       });
-      setAnalysis(response.text);
+      const text = response.text;
+      if (text && text.trim()) {
+        setAnalysis(text.trim());
+      } else {
+        setError('La IA no generó una respuesta. Esto puede deberse a filtros de seguridad o a un problema temporal. Por favor, inténtelo de nuevo.');
+      }
     } catch (e) {
       console.error(e);
       setError('Hubo un error al generar el análisis. Por favor, inténtalo de nuevo.');
