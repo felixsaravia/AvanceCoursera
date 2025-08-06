@@ -17,6 +17,9 @@ import FilterControls from './components/FilterControls';
 import ReportModal from './components/ReportModal';
 import { useNotifications } from './hooks/useNotifications';
 import NotificationBell from './components/NotificationBell';
+import CourseDeadlineAlert from './components/CourseDeadlineAlert';
+import ProgressUpdateAlert from './components/ProgressUpdateAlert';
+import AlertsMuteControl from './components/AlertsMuteControl';
 
 const parseDateAsUTC = (dateString: string): Date => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
@@ -141,7 +144,24 @@ const App: React.FC = () => {
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
     const [reportModalStudentId, setReportModalStudentId] = useState<number | null>(null);
     const { permission, sendNotification } = useNotifications();
+    const [areAlertsMuted, setAreAlertsMuted] = useState(false);
+    const [updatedStudentInfo, setUpdatedStudentInfo] = useState<{ name: string; pointsIncrease: number } | null>(null);
     
+    useEffect(() => {
+        const savedMuteState = localStorage.getItem('alertsMuted');
+        if (savedMuteState === 'true') {
+            setAreAlertsMuted(true);
+        }
+    }, []);
+    
+    const toggleAlertsMuted = () => {
+        setAreAlertsMuted(prev => {
+            const newState = !prev;
+            localStorage.setItem('alertsMuted', String(newState));
+            return newState;
+        });
+    };
+
     const reportModalStudent = useMemo(() => {
         return students.find(s => s.id === reportModalStudentId) || null;
     }, [reportModalStudentId, students]);
@@ -818,6 +838,19 @@ const App: React.FC = () => {
     
 
     const handleUpdateProgress = (studentId: number, courseIndex: number, newProgress: number) => {
+        const studentToUpdate = students.find(s => s.id === studentId);
+        if (studentToUpdate) {
+            const previousTotalPoints = studentToUpdate.totalPoints;
+            const tempCourseProgress = [...studentToUpdate.courseProgress];
+            tempCourseProgress[courseIndex] = newProgress;
+            const newTotalPoints = tempCourseProgress.reduce((sum, p) => sum + p, 0);
+            const pointsIncrease = newTotalPoints - previousTotalPoints;
+
+            if (pointsIncrease !== 0) {
+                setUpdatedStudentInfo({ name: studentToUpdate.name, pointsIncrease });
+            }
+        }
+
         setStudents(prev =>
             prev.map(s => {
                 if (s.id === studentId) {
@@ -936,6 +969,32 @@ const App: React.FC = () => {
     const handleSelectStudent = (studentId: number) => setSelectedStudentId(studentId);
     const handleClearSelectedStudent = () => setSelectedStudentId(null);
     
+    const programEndDateInfo = useMemo(() => {
+        if (!nextCourseDeadline) return null;
+
+        const deadlineDate = parseDateAsUTC(nextCourseDeadline.date);
+        const diffTime = deadlineDate.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays < 0) return null; // Safety check
+
+        return {
+            daysRemaining: diffDays,
+            courseName: nextCourseDeadline.courseName,
+        };
+    }, [nextCourseDeadline, today]);
+
+    const motivationalPhrases = [
+        "Cada día es una nueva oportunidad para estar más cerca de tu meta. ¡Sigue adelante!",
+        "La perseverancia no es una carrera larga, son muchas carreras cortas una tras otra. ¡Vamos por la de hoy!",
+        "El éxito es la suma de pequeños esfuerzos repetidos día tras día. ¡Tu esfuerzo cuenta!",
+        "No mires lo que te falta, celebra lo que ya has logrado. ¡Estás más cerca de lo que crees!",
+        "La confianza en ti mismo es el primer secreto del éxito. ¡Cree en tu talento!"
+    ];
+    
+    const [motivationalPhrase] = useState(() => motivationalPhrases[Math.floor(Math.random() * motivationalPhrases.length)]);
+
+
     const renderActiveView = () => {
          if (isDataLoading && students.length === 0) { // Only show full-screen loader on initial load
             return (
@@ -1030,6 +1089,21 @@ const App: React.FC = () => {
 
     return (
         <>
+        {programEndDateInfo && programEndDateInfo.daysRemaining >= 0 && (
+            <CourseDeadlineAlert
+                daysRemaining={programEndDateInfo.daysRemaining}
+                courseName={programEndDateInfo.courseName}
+                motivationalPhrase={motivationalPhrase}
+                isMuted={areAlertsMuted}
+            />
+        )}
+        {!areAlertsMuted && updatedStudentInfo && (
+            <ProgressUpdateAlert
+                studentName={updatedStudentInfo.name}
+                pointsIncrease={updatedStudentInfo.pointsIncrease}
+                onClose={() => setUpdatedStudentInfo(null)}
+            />
+        )}
         <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pb-28">
             {activeView === 'monitor' && !selectedStudent && (
                 <div className="mb-8 text-left">
@@ -1038,7 +1112,10 @@ const App: React.FC = () => {
                             <h1 className="text-4xl font-extrabold text-gray-900">Monitor de Avance <span className="text-sky-600 font-bold">Google IT Support</span></h1>
                             <p className="text-lg text-gray-500 mt-2">Registro de puntajes y estado de la certificación en tiempo real.</p>
                         </div>
-                        <NotificationBell />
+                        <div className="flex items-center gap-2">
+                           <AlertsMuteControl isMuted={areAlertsMuted} onToggle={toggleAlertsMuted} />
+                           <NotificationBell />
+                        </div>
                     </div>
                 </div>
             )}

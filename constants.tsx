@@ -39,8 +39,9 @@ export const STUDENT_PHONE_NUMBERS: { [key: string]: string } = {
     "Fatima Beatriz Masin Aguilar": "50376503426",
     "Adriana Marcela Chacón Reyes": "50372373855",
     "Emeli Lisvea Navarrete Flores": "50374423179",
-    "María Fernanda Martínez Cupido": "50379143566",
     "Ana Milena Cortez Linares": "50378468848",
+    "María Fernanda Martínez Cupido": "50379143566",
+    "Milena Mariana Vasquez Aquino": "50376606559",
     "María José Peraza Peña": "50376527140",
     "Rebeca Michelle Castro Pineda": "50371981227",
     "Alejandra Lisbeth Zavala Calles": "50375417274",
@@ -66,7 +67,8 @@ export const STUDENT_INSTITUTIONS: { [key: string]: string } = {
     "Gabriela Alexandra Alvayeros Guirola": "ITCA FEPADE",
     "Alejandra Lisbeth Zavala Calles": "Universidad Gerardo Barrios",
     "Isabella Gavidia Molina": "Escuela Bilingüe Maquilishuat",
-    "Katherine Alexandra Hernández Suriano": "ESFE"
+    "Katherine Alexandra Hernández Suriano": "ESFE",
+    "Milena Mariana Vasquez Aquino": "USO"
 };
 
 export const STUDENT_DEPARTMENTS: { [key: string]: string } = {
