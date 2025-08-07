@@ -15,8 +15,6 @@ import StudentProfileView from './components/StudentProfileView';
 import StatisticsView from './components/StatisticsView';
 import FilterControls from './components/FilterControls';
 import ReportModal from './components/ReportModal';
-import { useNotifications } from './hooks/useNotifications';
-import NotificationBell from './components/NotificationBell';
 import CourseDeadlineAlert from './components/CourseDeadlineAlert';
 import ProgressUpdateAlert from './components/ProgressUpdateAlert';
 import AlertsMuteControl from './components/AlertsMuteControl';
@@ -143,7 +141,6 @@ const App: React.FC = () => {
     });
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
     const [reportModalStudentId, setReportModalStudentId] = useState<number | null>(null);
-    const { permission, sendNotification } = useNotifications();
     const [areAlertsMuted, setAreAlertsMuted] = useState(false);
     const [updatedStudentInfo, setUpdatedStudentInfo] = useState<{ name: string; pointsIncrease: number } | null>(null);
     
@@ -707,28 +704,6 @@ const App: React.FC = () => {
         };
     }, [schedule, today]);
 
-    // Notification for upcoming deadlines
-    useEffect(() => {
-        if (permission === 'granted' && nextCourseDeadline) {
-            const deadlineDate = parseDateAsUTC(nextCourseDeadline.date);
-            const todayDate = getTodayInElSalvador();
-            const diffTime = deadlineDate.getTime() - todayDate.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
-            const notificationKey = `deadline-notif-${nextCourseDeadline.date}`;
-            const lastNotified = localStorage.getItem(notificationKey);
-            const todayString = todayDate.toISOString().split('T')[0];
-
-            if (diffDays > 0 && diffDays <= 3 && lastNotified !== todayString) {
-                sendNotification(
-                    'Fecha Límite Próxima', 
-                    `La fecha límite para "${nextCourseDeadline.courseName}" es en ${diffDays} día(s).`
-                );
-                localStorage.setItem(notificationKey, todayString);
-            }
-        }
-    }, [permission, nextCourseDeadline, sendNotification, today]);
-
     const generateWhatsAppLink = useCallback((student: Student, type: string, data?: any): string => {
         if (!student.phone) return '#';
         const name = student.name.split(' ')[0];
@@ -855,21 +830,12 @@ const App: React.FC = () => {
             prev.map(s => {
                 if (s.id === studentId) {
                     const previousTotalPoints = s.totalPoints;
-                    const oldStatus = s.status;
 
                     const newCourseProgress = [...s.courseProgress];
                     newCourseProgress[courseIndex] = newProgress;
                     
                     const newTotalPoints = newCourseProgress.reduce((sum, p) => sum + p, 0);
                     const newStatus = calculateStatus(newTotalPoints, s.expectedPoints);
-
-                    // Notification Logic
-                    if (oldStatus !== newStatus && newStatus === Status.Riesgo) {
-                        sendNotification('Estudiante en Riesgo', `${s.name} ha entrado en estado de "En Riesgo".`);
-                    }
-                    if (previousTotalPoints < TOTAL_MAX_POINTS && newTotalPoints === TOTAL_MAX_POINTS) {
-                        sendNotification('¡Certificación Completada!', `¡Felicidades! ${s.name} ha completado la certificación.`);
-                    }
 
                     const lastModification: LastModification = {
                         timestamp: new Date().toISOString(),
@@ -1114,7 +1080,6 @@ const App: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-2">
                            <AlertsMuteControl isMuted={areAlertsMuted} onToggle={toggleAlertsMuted} />
-                           <NotificationBell />
                         </div>
                     </div>
                 </div>
