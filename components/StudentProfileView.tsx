@@ -15,6 +15,7 @@ interface StudentProfileViewProps {
     onBack: () => void;
     isFirstPlace: boolean;
     schedule: ProcessedScheduleItem[];
+    generateAudioScript: (student: Student) => string;
 }
 
 const InfoCard: React.FC<{ title: string; children: React.ReactNode; className?: string }> = ({ title, children, className = '' }) => (
@@ -33,8 +34,19 @@ const VerificationItem: React.FC<{ label: string; verified: boolean }> = ({ labe
     </div>
 );
 
-const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, chartData, onBack, isFirstPlace, schedule }) => {
+const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, chartData, onBack, isFirstPlace, schedule, generateAudioScript }) => {
     const isTop3 = student.rankBadge === 'Top 3';
+    const [isSpeaking, setIsSpeaking] = useState(false);
+
+    useEffect(() => {
+        // Cleanup function to stop speech synthesis when the component unmounts
+        // or when the student profile changes.
+        return () => {
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            }
+        };
+    }, [student.id]);
 
     const achievements = {
         perfectStreak: student.status === Status.Avanzada || student.status === Status.EliteI || student.status === Status.EliteII,
@@ -43,6 +55,36 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, chartD
         pioneer: student.courseProgress.some(p => p === 100) && isTop3,
         lightspeed: student.expectedPoints > 0 && student.totalPoints >= student.expectedPoints * 1.5,
         knowledgeMaster: student.totalPoints === TOTAL_MAX_POINTS
+    };
+
+    const handleToggleAudio = () => {
+        if (!('speechSynthesis' in window)) {
+            alert('Tu navegador no soporta la síntesis de voz.');
+            return;
+        }
+
+        if (isSpeaking) {
+            window.speechSynthesis.cancel();
+            setIsSpeaking(false);
+        } else {
+            const script = generateAudioScript(student);
+            const utterance = new SpeechSynthesisUtterance(script);
+            utterance.lang = 'es-ES';
+            utterance.pitch = 1;
+            utterance.rate = 1;
+
+            utterance.onend = () => {
+                setIsSpeaking(false);
+            };
+            
+            utterance.onstart = () => {
+                setIsSpeaking(true);
+            };
+
+            // Ensure any previous speech is stopped before starting a new one.
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utterance);
+        }
     };
 
     const catchUpPlan = useMemo(() => {
@@ -180,6 +222,18 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, chartD
                 </div>
                 <div className="flex flex-col items-start sm:items-end gap-2">
                     <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleToggleAudio}
+                            title={isSpeaking ? "Detener reporte" : "Escuchar reporte en audio"}
+                            className="p-2 rounded-full text-sky-600 bg-sky-50 hover:bg-sky-100 transition-colors"
+                            aria-label="Escuchar reporte de avance"
+                        >
+                            {isSpeaking ? (
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
+                            ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
+                            )}
+                        </button>
                         {student.rankBadge && <RankBadge rank={student.rankBadge} />}
                         <StatusBadge status={student.status} />
                     </div>

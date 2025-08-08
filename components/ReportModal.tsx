@@ -94,7 +94,7 @@ const CertificateSelectionCheckbox: React.FC<{
 
 const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, student, generateWhatsAppLink, weeklyScheduleText, nextCourseDeadline }) => {
     const [view, setView] = useState<'main' | 'select_course' | 'select_certificate'>('main');
-    const [actionType, setActionType] = useState<'felicitar' | 'felicitar_iniciar' | 'recordar_certificado' | null>(null);
+    const [actionType, setActionType] = useState<'felicitar' | 'felicitar_iniciar' | 'recordar_certificado' | 'iniciar_curso' | null>(null);
     const [selectedCerts, setSelectedCerts] = useState<number[]>([]);
 
     const [isPinVerified, setIsPinVerified] = useState(false);
@@ -160,10 +160,10 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, student, gen
     };
 
     const renderMainView = () => (
-        <div className="space-y-3 animate-fade-in">
-             <ModalOptionButton
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-fade-in">
+            <ModalOptionButton
                 icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4V2h10v2"/><path d="M12 18.5 9 22l3-1.5 3 1.5-3-3.5"/><path d="M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z"/><path d="M12 15v3.5"/></svg>}
-                title="Felicitar"
+                title="Felicitar por curso"
                 description="Enviar felicitaciones por completar un curso."
                 onClick={() => {
                     setActionType('felicitar');
@@ -172,52 +172,72 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, student, gen
             />
             <ModalOptionButton
                 icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.3.05-3.11S7.09 9.81 7.94 9.1c1.26-1.5 5-2 5-2s-.5 3.74-2 5c-.84.71-2.3.7-3.11.05s-1.66-1.66-1.11-2.51c.55-.85 1.26-1.5 2.51-1.11z"/><path d="m21.5 2.5-1.9 1.9"/></svg>}
-                title="Felicitar e Iniciar Siguiente"
-                description="Felicitar y motivar a comenzar el próximo curso."
+                title="Felicitar y Siguiente"
+                description="Motivar a comenzar el próximo curso."
                 onClick={() => {
                     setActionType('felicitar_iniciar');
                     setView('select_course');
                 }}
             />
-             <ModalOptionButton
+            <ModalOptionButton
+                icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>}
+                title="Felicitar por avance"
+                description="Mensaje genérico por buen progreso."
+                href={generateWhatsAppLink(student, 'felicitar_avance')}
+                onClick={onClose}
+            />
+            <ModalOptionButton
+                icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 12-4-4-4 4"/><path d="m14 12v-10"/><path d="M4 12h10"/><path d="M4 20h16"/></svg>}
+                title="Iniciar curso específico"
+                description="Pedirle que inicie un curso en particular."
+                onClick={() => { setActionType('iniciar_curso'); setView('select_course'); }}
+            />
+            <ModalOptionButton
+                icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>}
+                title="Enviar Reporte"
+                description="Mensaje con su estado y puntajes."
+                href={generateWhatsAppLink(student, 'report')}
+                onClick={onClose}
+            />
+            <ModalOptionButton
                 icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>}
-                title="Recordar Entrega de Certificado"
-                description="Enviar un recordatorio para los certificados pendientes."
+                title="Recordar Certificado"
+                description="Recordatorio para certificados pendientes."
                 onClick={() => {
                     setActionType('recordar_certificado');
                     setView('select_certificate');
                 }}
             />
             <ModalOptionButton
-                icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>}
-                title="Enviar Reporte de Avance"
-                description="Mensaje pre-escrito con su estado y puntajes."
-                href={generateWhatsAppLink(student, 'report')}
+                icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21 16-4-4V7a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2l-4 4Z"/><path d="M14 14v4"/></svg>}
+                title="Invitar a Tutoría"
+                description="Preguntar si puede unirse a una sesión."
+                href={generateWhatsAppLink(student, 'recordar_tutoria')}
                 onClick={onClose}
             />
             <ModalOptionButton
-                icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>}
-                title="Enviar Mensaje en Blanco"
-                description="Abre un chat para escribir un mensaje personalizado."
-                href={generateWhatsAppLink(student, 'blank')}
-                 onClick={onClose}
-            />
-            <ModalOptionButton
                 icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>}
-                title="Enviar Cronograma Semanal"
-                description="Mandar las actividades programadas para la semana."
+                title="Enviar Cronograma"
+                description="Mandar actividades de la semana."
                 href={generateWhatsAppLink(student, 'schedule', { scheduleText: weeklyScheduleText })}
-                 onClick={onClose}
+                onClick={onClose}
             />
             {nextCourseDeadline && (
-                    <ModalOptionButton
+                 <ModalOptionButton
                     icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>}
-                    title="Recordar Próxima Entrega"
-                    description={`Informar sobre la fecha de fin del curso actual.`}
+                    title="Recordar Entrega"
+                    description={`Informar sobre la fecha de fin.`}
                     href={generateWhatsAppLink(student, 'deadline', { deadline: nextCourseDeadline })}
-                     onClick={onClose}
-                    />
+                    onClick={onClose}
+                 />
             )}
+             <ModalOptionButton
+                icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>}
+                title="Mensaje en Blanco"
+                description="Abrir chat para mensaje personalizado."
+                href={generateWhatsAppLink(student, 'blank')}
+                onClick={onClose}
+            />
         </div>
     );
 
@@ -227,7 +247,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, student, gen
                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                Volver
            </button>
-           <h4 className="font-bold text-gray-800 mb-3">¿Qué curso completó?</h4>
+           <h4 className="font-bold text-gray-800 mb-3">¿Sobre qué curso es el mensaje?</h4>
            <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-2">
                {COURSE_NAMES.map((courseName, index) => {
                    const isCompleted = student.courseProgress[index] === 100;
@@ -325,7 +345,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, student, gen
 
     const viewSubtitles: {[key: string]: string} = {
         main: 'Selecciona una acción rápida',
-        select_course: 'Selecciona el curso a felicitar',
+        select_course: 'Selecciona el curso para el mensaje',
         select_certificate: 'Selecciona los certificados pendientes'
     };
     
@@ -333,7 +353,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, student, gen
 
     return (
         <div className={`fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`} onClick={onClose}>
-            <div className={`bg-white rounded-xl shadow-2xl p-6 w-full max-w-md transition-all duration-300 ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`} onClick={e => e.stopPropagation()}>
+            <div className={`bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl transition-all duration-300 ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`} onClick={e => e.stopPropagation()}>
                 <div className="flex justify-between items-start mb-6">
                     <div>
                         <h3 className="text-xl font-bold text-gray-900">Contactar a {student.name.split(' ')[0]}</h3>

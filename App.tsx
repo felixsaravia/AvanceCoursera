@@ -304,6 +304,18 @@ const App: React.FC = () => {
           currentModuleNumber: moduleNumber > 0 ? moduleNumber : 1 
       };
     }, [scheduleUpToToday]);
+    
+    const currentCourseEndDate = useMemo(() => {
+        if (!currentCourseName) return null;
+        const courseDates = schedule
+            .filter(item => item.course === currentCourseName)
+            .map(item => parseDateAsUTC(item.date).getTime());
+        
+        if (courseDates.length === 0) return null;
+
+        const endDate = new Date(Math.max(...courseDates));
+        return endDate.toISOString().split('T')[0];
+    }, [currentCourseName, schedule]);
 
     const processedSchedule: ProcessedScheduleItem[] = useMemo(() => {
         const courseToModulesMap = new Map<string, string[]>();
@@ -767,6 +779,16 @@ const App: React.FC = () => {
                     message = `¡Increíble, ${name}! 🥳 Ha completado el curso "${completedCourseName}". ¡Y con este, ha finalizado toda la ruta de aprendizaje! ¡Muchísimas felicidades por este gran logro! 🏆`;
                 }
                 break;
+            case 'felicitar_avance':
+                message = `¡Hola ${name}! Solo pasaba para felicitarte por tu excelente avance en la certificación. ¡Sigue así, estás haciendo un trabajo fantástico! 💪`;
+                break;
+            case 'iniciar_curso':
+                const { courseName: startCourseName } = data;
+                message = `Hola ${name}, ¡espero que estés muy bien! Te escribo para animarte a que inicies con el curso: *"${startCourseName}"*. ¡Dar el primer paso es lo más importante! 😊`;
+                break;
+            case 'recordar_tutoria':
+                message = `Hola ${name}, ¿cómo estás? Quería saber si tienes un momento para conectarte a una tutoría y que podamos revisar tus avances o cualquier duda que tengas. ¡Me avisas! 😊\n\nEl enlace de la sesión es: https://meet.google.com/jpj-nibe-hro`;
+                break;
             case 'certificate':
                 const { courseName } = data;
                 message = `¡Felicidades, ${name}! 🥳 Ha completado el curso "${courseName}".\n\nPor favor, no olvide subir su certificado a la carpeta de Drive para que podamos registrarlo. ¡Está un paso más cerca de la meta! 🚀\n\nEnlace a Drive: https://drive.google.com/drive/folders/18xkVPEYMjsZDAIutOVclhyMNdfwYhQb5?usp=drive_link`;
@@ -960,6 +982,50 @@ const App: React.FC = () => {
     
     const [motivationalPhrase] = useState(() => motivationalPhrases[Math.floor(Math.random() * motivationalPhrases.length)]);
 
+    const generateAudioScript = useCallback((student: Student): string => {
+        const firstName = student.name.split(' ')[0];
+        let script = `Hola, ${firstName}. Este es tu reporte de avance en audio. Tu estado actual es ${student.status}. Tienes ${student.totalPoints} puntos. `;
+
+        if (student.status === Status.Atrasada || student.status === Status.Riesgo) {
+            const pointsNeeded = Math.round(student.expectedPoints - student.totalPoints);
+            if (pointsNeeded > 0) {
+                script += `Para ponerte al día, necesitas sumar aproximadamente ${pointsNeeded} ${pointsNeeded === 1 ? 'punto' : 'puntos'}. ¡Ánimo, cada paso cuenta! `;
+            }
+        }
+        
+        const courseNumber = currentCourseName.split('.')[0];
+        script += `Actualmente, el programa se enfoca en el Curso ${courseNumber}, Módulo ${currentModuleNumber}: "${currentModuleName}". `;
+
+        if (currentCourseEndDate) {
+            const endDate = parseDateAsUTC(currentCourseEndDate);
+            const formattedDate = new Intl.DateTimeFormat('es-ES', { dateStyle: 'full', timeZone: 'UTC' }).format(endDate);
+            script += `La fecha de finalización sugerida para este curso es el ${formattedDate}. `;
+        }
+
+        switch(student.status) {
+            case Status.Riesgo:
+                script += "Recuerda, los mayores desafíos traen las mayores recompensas. ¡Estamos aquí para apoyarte en cada paso!";
+                break;
+            case Status.Atrasada:
+                script += "No te desanimes. La perseverancia es clave en tecnología. ¡Organiza tu tiempo, enfócate en el siguiente módulo y verás cómo avanzas!";
+                break;
+            case Status.AlDia:
+                script += "¡Vas muy bien! Mantener el ritmo es un gran logro. Sigue con esa disciplina y constancia.";
+                break;
+            case Status.Avanzada:
+            case Status.EliteI:
+            case Status.EliteII:
+                script += "¡Tu rendimiento es excepcional! Estás demostrando una gran capacidad y liderazgo. Sigue así y llegarás muy lejos.";
+                break;
+            case Status.Finalizada:
+                script += "¡Felicidades por haber completado la certificación! Este es un gran logro y el inicio de una emocionante carrera.";
+                break;
+            default:
+                script += "¡Sigue adelante con tu aprendizaje! Cada lección que completas te acerca más a tu meta.";
+        }
+        return script;
+    }, [currentCourseName, currentModuleName, currentModuleNumber, currentCourseEndDate]);
+
 
     const renderActiveView = () => {
          if (isDataLoading && students.length === 0) { // Only show full-screen loader on initial load
@@ -1005,6 +1071,7 @@ const App: React.FC = () => {
                             onSort={handleSort}
                             sortConfig={sortConfig}
                             onOpenReportModal={handleOpenReportModal}
+                            generateAudioScript={generateAudioScript}
                         />
                         <AIAnalyzer students={finalSortedStudents} expectedPointsToday={expectedPointsToday} />
                         <StatisticsView students={finalSortedStudents} />
@@ -1048,6 +1115,7 @@ const App: React.FC = () => {
                     onBack={handleClearSelectedStudent}
                     isFirstPlace={isFirstPlace}
                     schedule={processedSchedule}
+                    generateAudioScript={generateAudioScript}
                 />
             </main>
         )
