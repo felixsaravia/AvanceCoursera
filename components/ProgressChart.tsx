@@ -78,7 +78,7 @@ const ProgressChart: React.FC<ProgressChartProps> = ({ data }) => {
                 {/* Data lines */}
                 <polyline
                     fill="none"
-                    stroke="#a855f7" // purple-500
+                    stroke="#4f46e5" // indigo-600
                     strokeWidth="2.5"
                     points={studentPath}
                     strokeLinecap="round"
@@ -86,7 +86,7 @@ const ProgressChart: React.FC<ProgressChartProps> = ({ data }) => {
                 />
                  <polyline
                     fill="none"
-                    stroke="#0ea5e9" // sky-500
+                    stroke="#9ca3af" // gray-400
                     strokeWidth="2.5"
                     strokeDasharray="4, 4"
                     points={expectedPath}
@@ -96,17 +96,17 @@ const ProgressChart: React.FC<ProgressChartProps> = ({ data }) => {
 
                 {/* Current day marker */}
                 {studentSeries.length > 0 && (
-                     <circle cx={xScale(studentSeries[studentSeries.length-1].day)} cy={yScale(studentSeries[studentSeries.length-1].points)} r="4" fill="#a855f7" stroke="white" strokeWidth="2" />
+                     <circle cx={xScale(studentSeries[studentSeries.length-1].day)} cy={yScale(studentSeries[studentSeries.length-1].points)} r="4" fill="#4f46e5" stroke="white" strokeWidth="2" />
                 )}
 
             </svg>
             <div className="flex justify-center items-center gap-6 mt-4 text-sm">
                 <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-indigo-600"></div>
                     <span className="text-gray-600">Progreso de la Estudiante</span>
                 </div>
                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-1 border-t-2 border-sky-500 border-dashed"></div>
+                    <div className="w-8 h-1 border-t-2 border-gray-400 border-dashed"></div>
                     <span className="text-gray-600">Progreso Esperado</span>
                 </div>
             </div>

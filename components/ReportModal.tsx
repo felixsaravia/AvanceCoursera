@@ -353,25 +353,29 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, student, gen
 
     return (
         <div className={`fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`} onClick={onClose}>
-            <div className={`bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl transition-all duration-300 ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`} onClick={e => e.stopPropagation()}>
-                <div className="flex justify-between items-start mb-6">
-                    <div>
-                        <h3 className="text-xl font-bold text-gray-900">Contactar a {student.name.split(' ')[0]}</h3>
-                        <p className="text-sm text-gray-500">
-                             {subtitle}
-                        </p>
+            <div className={`bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col transition-all duration-300 ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`} style={{maxHeight: '90vh'}} onClick={e => e.stopPropagation()}>
+                <div className="flex-shrink-0 p-6 pb-4">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h3 className="text-xl font-bold text-gray-900">Contactar a {student.name.split(' ')[0]}</h3>
+                            <p className="text-sm text-gray-500">
+                                {subtitle}
+                            </p>
+                        </div>
+                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 rounded-full p-1 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        </button>
                     </div>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 rounded-full p-1 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                    </button>
                 </div>
-                {!isPinVerified ? pinForm : (
-                    <>
-                        {view === 'main' && renderMainView()}
-                        {view === 'select_course' && renderSelectCourseView()}
-                        {view === 'select_certificate' && renderSelectCertificateView()}
-                    </>
-                )}
+                <div className="overflow-y-auto px-6 pb-6 custom-scrollbar">
+                    {!isPinVerified ? pinForm : (
+                        <>
+                            {view === 'main' && renderMainView()}
+                            {view === 'select_course' && renderSelectCourseView()}
+                            {view === 'select_certificate' && renderSelectCertificateView()}
+                        </>
+                    )}
+                </div>
             </div>
         </div>
     );

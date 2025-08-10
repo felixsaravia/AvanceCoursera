@@ -150,8 +150,16 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, initialSt
             {students.map((student, index) => {
               const originalStudent = initialStudents.find(s => s.id === student.id);
               const isFinalizada = student.status === Status.Finalizada;
+              const isRiesgo = student.status === Status.Riesgo;
+
+              const rowClass = isFinalizada
+                ? 'bg-slate-50 font-medium'
+                : isRiesgo
+                ? 'bg-red-50 border-l-4 border-red-400 hover:bg-red-100'
+                : 'hover:bg-gray-50';
+              
               return (
-              <tr key={student.id} className={`${isFinalizada ? 'bg-slate-50 font-medium' : 'hover:bg-gray-50'} transition-colors duration-200`}>
+              <tr key={student.id} className={`${rowClass} transition-colors duration-200`}>
                 <td className="whitespace-nowrap text-center py-4 px-3 text-lg font-bold text-gray-500">{index + 1}</td>
                 <td className="whitespace-nowrap py-4 px-3 text-sm font-medium text-gray-900">
                    {student.name}
@@ -223,13 +231,48 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, initialSt
         </table>
       </div>
 
+      {/* Mobile Sort Controls */}
+      <div className="md:hidden mb-4">
+        <div className="flex items-center justify-between bg-gray-100 p-1.5 rounded-lg text-sm">
+            <span className="text-gray-600 font-medium ml-2">Ordenar por:</span>
+            <div className="flex items-center gap-1">
+                {['name', 'totalPoints', 'status'].map(key => {
+                    const labels: { [key: string]: string } = {
+                        name: 'Nombre',
+                        totalPoints: 'Puntaje',
+                        status: 'Estado',
+                    };
+                    const isActive = sortConfig.key === key;
+                    return (
+                        <button
+                            key={key}
+                            type="button"
+                            onClick={() => onSort(key)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors font-semibold ${
+                                isActive ? 'bg-white text-sky-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'
+                            }`}
+                        >
+                            <span>{labels[key]}</span>
+                            <SortIndicator direction={isActive ? sortConfig.direction : null} />
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+      </div>
+      
       {/* Mobile View */}
-      <div className="block md:hidden space-y-3">
+      <div className="md:hidden space-y-3">
         {students.map((student, index) => {
            const originalStudent = initialStudents.find(s => s.id === student.id);
            const isSpeaking = speakingStudentId === student.id;
+           const isRiesgo = student.status === Status.Riesgo;
            return (
-            <div key={student.id} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+            <div key={student.id} className={`bg-white rounded-lg shadow-sm overflow-hidden transition-all ${
+                isRiesgo 
+                   ? 'border-2 border-red-400 ring-2 ring-red-100' 
+                   : 'border border-gray-200'
+            }`}>
                 {/* Student Info Part - not clickable */}
                 <div className="p-4">
                     <div className="flex items-center justify-between">

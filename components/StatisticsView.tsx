@@ -117,6 +117,16 @@ const CourseStatCard: React.FC<{
     );
 };
 
+const CHART_COLORS: { [key in Status]: string } = {
+    [Status.Finalizada]: 'text-yellow-400',
+    [Status.EliteII]: 'text-fuchsia-400',
+    [Status.EliteI]: 'text-violet-400',
+    [Status.Avanzada]: 'text-sky-400',
+    [Status.AlDia]: 'text-green-400',
+    [Status.Atrasada]: 'text-orange-400',
+    [Status.Riesgo]: 'text-red-500',
+    [Status.SinIniciar]: 'text-gray-400',
+};
 
 const StatisticsView: React.FC<StatisticsViewProps> = ({ students }) => {
     
@@ -128,7 +138,7 @@ const StatisticsView: React.FC<StatisticsViewProps> = ({ students }) => {
                 donutChartData: orderedStatuses.map(status => ({
                     label: status,
                     value: 0,
-                    color: STATUS_CONFIG[status].textColor,
+                    color: CHART_COLORS[status],
                 })),
                 courseCompletions: [],
             };
@@ -147,7 +157,7 @@ const StatisticsView: React.FC<StatisticsViewProps> = ({ students }) => {
         const donutChartData = orderedStatuses.map(status => ({
             label: status,
             value: statusCounts[status] || 0,
-            color: STATUS_CONFIG[status].textColor,
+            color: CHART_COLORS[status],
         }));
         
         const courseCompletions = COURSE_NAMES.map((name, index) => {
@@ -188,30 +198,28 @@ const StatisticsView: React.FC<StatisticsViewProps> = ({ students }) => {
                         />
                          <StatCard
                             icon={<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-500"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>}
-                            title="Certificación Completa"
+                            title="Certificación Completada"
                             value={stats.completedCount}
-                            description={stats.completedCount === 1 ? "estudiante ha finalizado" : "estudiantes han finalizado"}
+                            description="Estudiantes que finalizaron"
                             colorClass="bg-yellow-50 border-yellow-200"
                         />
                     </div>
                 </div>
 
-                {stats.courseCompletions.length > 0 && (
-                     <div className="pt-6 border-t border-gray-200">
-                        <h3 className="font-bold text-lg text-gray-900 mb-4 text-center">Finalización por Curso</h3>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                            {stats.courseCompletions.map((course, index) => (
-                                <CourseStatCard 
-                                    key={index}
-                                    courseName={course.name}
-                                    fullName={course.fullName}
-                                    completed={course.completed}
-                                    total={course.total}
-                                />
-                            ))}
-                        </div>
+                <div>
+                    <h3 className="font-bold text-lg text-gray-900 mb-4">Finalización por Curso</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                        {stats.courseCompletions.map(course => (
+                           <CourseStatCard 
+                            key={course.fullName}
+                            courseName={course.name}
+                            fullName={course.fullName}
+                            completed={course.completed}
+                            total={course.total}
+                           />
+                        ))}
                     </div>
-                )}
+                </div>
             </div>
         </div>
     );
