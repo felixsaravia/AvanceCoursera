@@ -161,8 +161,9 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, initialSt
               return (
               <tr key={student.id} className={`${rowClass} transition-colors duration-200`}>
                 <td className="whitespace-nowrap text-center py-4 px-3 text-lg font-bold text-gray-500">{index + 1}</td>
-                <td className="whitespace-nowrap py-4 px-3 text-sm font-medium text-gray-900">
-                   {student.name}
+                <td className="whitespace-nowrap py-4 px-3 text-sm">
+                   <div className="font-medium text-gray-900">{student.name}</div>
+                   {student.institucion && <div className="text-gray-500 mt-1">{student.institucion}</div>}
                 </td>
                 <td className="whitespace-nowrap text-center py-4 px-3">
                    <button 
@@ -281,7 +282,10 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, initialSt
                             <span className={`w-1.5 h-10 rounded-full ${STATUS_CONFIG[student.status].indicatorColor} flex-shrink-0`}></span>
                             <div className="flex-1 min-w-0">
                                 <p className="font-semibold text-gray-900 leading-tight truncate">{student.name}</p>
-                                <StatusBadge status={student.status} />
+                                {student.institucion && <p className="text-xs text-gray-500 truncate mt-0.5">{student.institucion}</p>}
+                                <div className="mt-1.5">
+                                    <StatusBadge status={student.status} />
+                                </div>
                             </div>
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0 ml-2">
