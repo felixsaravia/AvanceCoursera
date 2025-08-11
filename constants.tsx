@@ -56,7 +56,7 @@ export const STUDENT_INSTITUTIONS: { [key: string]: string } = {
     "Ana Milena Cortez Linares": "Universidad Don Bosco",
     "Adriana Marcela Chacón Reyes": "Universidad Don Bosco",
     "Kateryn Estefany Zelada Galicia": "Escuela Monica Herrera",
-    "María Fernanda Martínez Cupido": "UCA",
+    "María Fernanda Martínez Cupido": "Universidad de Sonsonate",
     "Tania Abigail Barahona Fuentes": "Universidad de Sonsonate",
     "Laura Rocío Perdomo Ramírez": "UCA",
     "Karla Michelle González González": "Universidad Dr. José Matias Delgado",
