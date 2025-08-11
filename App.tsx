@@ -1050,7 +1050,7 @@ const App: React.FC = () => {
                             currentModuleName={currentModuleName}
                             currentModuleNumber={currentModuleNumber}
                         />
-                         <StatusSummary students={finalSortedStudents} />
+                         <StatusSummary students={finalSortedStudents} expectedPointsToday={expectedPointsToday} />
                          <FilterControls
                             institutions={uniqueInstitutions}
                             departments={uniqueDepartments}
