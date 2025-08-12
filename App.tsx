@@ -18,6 +18,7 @@ import ReportModal from './components/ReportModal';
 import CourseDeadlineAlert from './components/CourseDeadlineAlert';
 import ProgressUpdateAlert from './components/ProgressUpdateAlert';
 import AlertsMuteControl from './components/AlertsMuteControl';
+import InstructorView from './components/InstructorView';
 
 const parseDateAsUTC = (dateString: string): Date => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
@@ -38,7 +39,7 @@ const getTodayInElSalvador = (): Date => {
 };
 
 
-export type ActiveView = 'monitor' | 'schedule' | 'verification' | 'certificates' | 'help' | 'tools';
+export type ActiveView = 'monitor' | 'schedule' | 'verification' | 'certificates' | 'help' | 'tools' | 'instructor';
 
 type SyncStatus = {
     time: Date | null;
@@ -1026,6 +1027,19 @@ const App: React.FC = () => {
         return script;
     }, [currentCourseName, currentModuleName, currentModuleNumber, currentCourseEndDate]);
 
+    const courseEndDates = useMemo(() => {
+        return COURSE_NAMES.map((courseName) => {
+            const courseDates = schedule
+                .filter(item => item.course === courseName)
+                .map(item => parseDateAsUTC(item.date).getTime());
+            
+            if (courseDates.length === 0) return null;
+            
+            const endDate = new Date(Math.max(...courseDates));
+            return endDate;
+        });
+    }, [schedule]);
+
 
     const renderActiveView = () => {
          if (isDataLoading && students.length === 0) { // Only show full-screen loader on initial load
@@ -1098,6 +1112,14 @@ const App: React.FC = () => {
                             getExpectedPointsForDate={getExpectedPointsForDate}
                             expectedPointsToday={expectedPointsToday}
                        />;
+            case 'instructor':
+                return <InstructorView 
+                    students={rankedStudents}
+                    courseEndDates={courseEndDates}
+                    today={today}
+                    onOpenReportModal={handleOpenReportModal}
+                    courseNames={COURSE_NAMES}
+                />;
             case 'help':
                  return <HelpView 
                     questions={questions.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime())}
@@ -1163,6 +1185,12 @@ const App: React.FC = () => {
                 <div className="mb-8 text-left">
                     <h1 className="text-4xl font-extrabold text-gray-900">Cronograma de Avance</h1>
                     <p className="text-lg text-gray-500 mt-2">Consulta las fechas, módulos y el puntaje esperado para cada día del programa.</p>
+                </div>
+            )}
+            {activeView === 'instructor' && !selectedStudent && (
+                <div className="mb-8 text-left">
+                    <h1 className="text-4xl font-extrabold text-gray-900">Sección del Instructor</h1>
+                    <p className="text-lg text-gray-500 mt-2">Resumen de estudiantes que requieren atención prioritaria.</p>
                 </div>
             )}
            {viewsWithSave.includes(activeView) && !selectedStudent && (
