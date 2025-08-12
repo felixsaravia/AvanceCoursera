@@ -30,6 +30,17 @@ const SortIndicator = ({ direction }: { direction: 'asc' | 'desc' | null }) => {
     return <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-sky-600"><path d="m6 9 6 6 6-6"/></svg>;
 };
 
+const TrophyIcon = ({ size = 20 }: { size?: number }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500 flex-shrink-0">
+        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+        <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+        <path d="M4 22h16"/>
+        <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+        <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+        <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+    </svg>
+);
+
 const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, initialStudents, onUpdateProgress, isReadOnly, currentCourseName, onSelectStudent, onSort, sortConfig, onOpenReportModal, generateAudioScript }) => {
   const [editingCell, setEditingCell] = useState<{ studentId: number; courseIndex: number } | null>(null);
   const [speakingStudentId, setSpeakingStudentId] = useState<number | null>(null);
@@ -100,7 +111,7 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, initialSt
   };
 
   const SortableHeader: React.FC<{ sortKey: string; children: React.ReactNode; className?: string, title?: string }> = ({ sortKey, children, className, title }) => (
-    <th scope="col" className={`py-3.5 px-3 text-sm font-semibold text-gray-500 ${className}`} title={title}>
+    <th scope="col" className={`py-3.5 px-2 text-sm font-semibold text-gray-500 ${className}`} title={title}>
       <button
         type="button"
         onClick={() => onSort(sortKey)}
@@ -120,10 +131,8 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, initialSt
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th scope="col" className="w-16 text-center py-3.5 px-3 text-sm font-semibold text-gray-500">#</th>
+              <th scope="col" className="w-12 text-center py-3.5 px-3 text-sm font-semibold text-gray-500">#</th>
               <SortableHeader sortKey="name" className="text-left">Nombre</SortableHeader>
-              <th scope="col" className="w-16 text-center py-3.5 px-3 text-sm font-semibold text-gray-500"><span className="sr-only">Ver Perfil</span></th>
-              <th scope="col" className="w-20 text-center py-3.5 px-3 text-sm font-semibold text-gray-500">Reporte</th>
               <SortableHeader sortKey="status" className="text-left">Estado</SortableHeader>
               {COURSE_SHORT_NAMES.map((name, i) => {
                 const isCurrentCourse = COURSE_NAMES[i] === currentCourseName;
@@ -131,19 +140,18 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, initialSt
                   <SortableHeader 
                     key={i} 
                     sortKey={`courseProgress.${i}`}
-                    className={`text-center whitespace-nowrap transition-colors ${isCurrentCourse ? 'bg-sky-100' : ''}`}
+                    className={`text-center transition-colors ${isCurrentCourse ? 'bg-sky-100' : ''}`}
                     title={COURSE_NAMES[i]}
                   >
-                    <div className="text-center w-full">
-                      <div className="font-semibold">Curso {i + 1}</div>
-                      <div className="font-normal mt-1">{name}</div>
+                    <div className="flex flex-col items-center leading-tight">
+                        <span className="font-bold text-base">{`C${i+1}`}</span>
+                        <span className="font-normal text-[11px] text-gray-500 mt-1">{name}</span>
                     </div>
                   </SortableHeader>
                 );
               })}
-              <th scope="col" className="w-48 py-3.5 px-3 text-left text-sm font-semibold text-gray-500">Progreso Total</th>
-              <SortableHeader sortKey="totalPoints" className="text-center">Puntos</SortableHeader>
-              <SortableHeader sortKey="expectedPoints" className="text-center">Esperado</SortableHeader>
+              <SortableHeader sortKey="totalPoints" className="text-center">Puntaje</SortableHeader>
+              <th scope="col" className="w-28 text-center py-3.5 px-3 text-sm font-semibold text-gray-500">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white">
@@ -153,7 +161,7 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, initialSt
               const isRiesgo = student.status === Status.Riesgo;
 
               const rowClass = isFinalizada
-                ? 'bg-slate-50 font-medium'
+                ? 'bg-amber-50 border-l-4 border-amber-400 hover:bg-amber-100 font-semibold'
                 : isRiesgo
                 ? 'bg-red-50 border-l-4 border-red-400 hover:bg-red-100'
                 : 'hover:bg-gray-50';
@@ -161,31 +169,15 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, initialSt
               return (
               <tr key={student.id} className={`${rowClass} transition-colors duration-200`}>
                 <td className="whitespace-nowrap text-center py-4 px-3 text-lg font-bold text-gray-500">{index + 1}</td>
-                <td className="whitespace-nowrap py-4 px-3 text-sm">
-                   <div className="font-medium text-gray-900">{student.name}</div>
-                   {student.institucion && <div className="text-gray-500 mt-1">{student.institucion}</div>}
-                </td>
-                <td className="whitespace-nowrap text-center py-4 px-3">
-                   <button 
-                      onClick={() => onSelectStudent(student.id)}
-                      title="Ver perfil detallado"
-                      className="text-gray-500 hover:text-sky-600 transition-colors"
-                  >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8a2 2 0 0 1 0 2.8l-6 6-4-4-4 4"/></svg>
-                      <span className="sr-only">Ver perfil de {student.name}</span>
-                  </button>
-                </td>
-                <td className="whitespace-nowrap text-center py-4 px-3">
-                  {student.phone && (
-                       <button
-                          onClick={() => onOpenReportModal(student.id)}
-                          title="Abrir opciones de reporte"
-                          className="inline-block text-green-600 hover:text-green-700 transition-colors"
-                      >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                          <span className="sr-only">Opciones de reporte para {student.name}</span>
-                      </button>
-                  )}
+                <td className="py-4 px-3 text-sm">
+                   <div className="flex items-center gap-2">
+                     {isFinalizada && <TrophyIcon />}
+                     <div className="font-medium text-gray-900">{student.name}</div>
+                   </div>
+                   {student.institucion && <div className="text-gray-500 mt-1 text-xs">{student.institucion}</div>}
+                   <div className="mt-2" style={{width: '150px'}}>
+                     <ProgressBar progress={(student.totalPoints / TOTAL_MAX_POINTS) * 100} />
+                   </div>
                 </td>
                 <td className="whitespace-nowrap py-4 px-3 text-sm"><StatusBadge status={student.status} /></td>
                 {student.courseProgress.map((progress, i) => {
@@ -220,11 +212,32 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, initialSt
                     </td>
                   )
                 })}
-                <td className="whitespace-nowrap py-4 px-3 text-sm text-gray-600">
-                  <ProgressBar progress={(student.totalPoints / TOTAL_MAX_POINTS) * 100} />
+                <td className="whitespace-nowrap text-center py-4 px-3 text-sm">
+                    <span className="font-semibold text-sky-600">{student.totalPoints}</span>
+                    <span className="text-gray-500"> / {Math.round(student.expectedPoints)}</span>
                 </td>
-                <td className="whitespace-nowrap text-center py-4 px-3 text-sm font-semibold text-sky-600">{student.totalPoints}</td>
-                <td className="whitespace-nowrap text-center py-4 px-3 text-sm text-gray-500">{Math.round(student.expectedPoints)}</td>
+                <td className="whitespace-nowrap py-4 px-3 text-center">
+                   <div className="flex items-center justify-center gap-3">
+                    <button 
+                        onClick={() => onSelectStudent(student.id)}
+                        title="Ver perfil detallado"
+                        className="text-gray-500 hover:text-sky-600 transition-colors"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8a2 2 0 0 1 0 2.8l-6 6-4-4-4 4"/></svg>
+                        <span className="sr-only">Ver perfil de {student.name}</span>
+                    </button>
+                    {student.phone && (
+                         <button
+                            onClick={() => onOpenReportModal(student.id)}
+                            title="Abrir opciones de reporte"
+                            className="inline-block text-green-600 hover:text-green-700 transition-colors"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                            <span className="sr-only">Opciones de reporte para {student.name}</span>
+                        </button>
+                    )}
+                   </div>
+                </td>
               </tr>
               );
             })}
@@ -267,13 +280,17 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, initialSt
         {students.map((student, index) => {
            const originalStudent = initialStudents.find(s => s.id === student.id);
            const isSpeaking = speakingStudentId === student.id;
+           const isFinalizada = student.status === Status.Finalizada;
            const isRiesgo = student.status === Status.Riesgo;
+
+           const cardClass = isFinalizada
+                ? 'border-2 border-amber-400 ring-2 ring-amber-100'
+                : isRiesgo 
+                ? 'border-2 border-red-400 ring-2 ring-red-100' 
+                : 'border border-gray-200';
+                
            return (
-            <div key={student.id} className={`bg-white rounded-lg shadow-sm overflow-hidden transition-all ${
-                isRiesgo 
-                   ? 'border-2 border-red-400 ring-2 ring-red-100' 
-                   : 'border border-gray-200'
-            }`}>
+            <div key={student.id} className={`bg-white rounded-lg shadow-sm overflow-hidden transition-all ${cardClass}`}>
                 {/* Student Info Part - not clickable */}
                 <div className="p-4">
                     <div className="flex items-center justify-between">
@@ -281,7 +298,10 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ students, initialSt
                             <span className="text-xl font-bold text-gray-400 w-6 text-center flex-shrink-0">{index + 1}</span>
                             <span className={`w-1.5 h-10 rounded-full ${STATUS_CONFIG[student.status].indicatorColor} flex-shrink-0`}></span>
                             <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-gray-900 leading-tight truncate">{student.name}</p>
+                                <div className="flex items-center gap-1.5">
+                                    {isFinalizada && <TrophyIcon size={18} />}
+                                    <p className={`font-semibold leading-tight truncate ${isFinalizada ? 'text-amber-800' : 'text-gray-900'}`}>{student.name}</p>
+                                </div>
                                 {student.institucion && <p className="text-xs text-gray-500 truncate mt-0.5">{student.institucion}</p>}
                                 <div className="mt-1.5">
                                     <StatusBadge status={student.status} />

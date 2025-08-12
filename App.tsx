@@ -1044,14 +1044,17 @@ const App: React.FC = () => {
             case 'monitor':
                 return (
                     <div className="space-y-6">
+                        {/* High-level status cards */}
                         <ProgressSummary 
                             expectedPointsToday={expectedPointsToday}
                             currentCourseName={currentCourseName}
                             currentModuleName={currentModuleName}
                             currentModuleNumber={currentModuleNumber}
                         />
-                         <StatusSummary students={finalSortedStudents} expectedPointsToday={expectedPointsToday} />
-                         <FilterControls
+                        <StatusSummary students={finalSortedStudents} expectedPointsToday={expectedPointsToday} />
+                        
+                        {/* Controls and AI analysis before the table */}
+                        <FilterControls
                             institutions={uniqueInstitutions}
                             departments={uniqueDepartments}
                             statuses={orderedStatuses}
@@ -1061,6 +1064,9 @@ const App: React.FC = () => {
                             filteredCount={finalSortedStudents.length}
                             totalCount={students.length}
                         />
+                        <AIAnalyzer students={finalSortedStudents} expectedPointsToday={expectedPointsToday} />
+                        
+                        {/* Main leaderboard table */}
                         <LeaderboardTable 
                             students={finalSortedStudents} 
                             initialStudents={initialStudents}
@@ -1073,7 +1079,8 @@ const App: React.FC = () => {
                             onOpenReportModal={handleOpenReportModal}
                             generateAudioScript={generateAudioScript}
                         />
-                        <AIAnalyzer students={finalSortedStudents} expectedPointsToday={expectedPointsToday} />
+                        
+                        {/* Detailed stats graphics at the bottom */}
                         <StatisticsView students={finalSortedStudents} />
                     </div>
                 );
@@ -1108,7 +1115,7 @@ const App: React.FC = () => {
     if (selectedStudent && chartData) {
         const isFirstPlace = selectedStudent?.id === studentsSortedByPoints[0]?.id && studentsSortedByPoints.length > 0 && studentsSortedByPoints[0].totalPoints > 0;
         return (
-            <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pb-28">
+            <main className="max-w-[95vw] mx-auto p-4 sm:p-6 lg:p-8 pb-28">
                 <StudentProfileView
                     student={selectedStudent}
                     chartData={chartData}
@@ -1138,7 +1145,7 @@ const App: React.FC = () => {
                 onClose={() => setUpdatedStudentInfo(null)}
             />
         )}
-        <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pb-28">
+        <main className="max-w-[95vw] mx-auto p-4 sm:p-6 lg:p-8 pb-28">
             {activeView === 'monitor' && !selectedStudent && (
                 <div className="mb-8 text-left">
                     <div className="flex justify-between items-start">
