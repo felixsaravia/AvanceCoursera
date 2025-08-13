@@ -1119,6 +1119,7 @@ const App: React.FC = () => {
                     today={today}
                     onOpenReportModal={handleOpenReportModal}
                     courseNames={COURSE_NAMES}
+                    schedule={processedSchedule}
                 />;
             case 'help':
                  return <HelpView 
