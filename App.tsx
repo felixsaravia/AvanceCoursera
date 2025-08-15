@@ -15,8 +15,10 @@ import StudentProfileView from './components/StudentProfileView';
 import StatisticsView from './components/StatisticsView';
 import FilterControls from './components/FilterControls';
 import ReportModal from './components/ReportModal';
-import { useNotifications } from './hooks/useNotifications';
-import NotificationBell from './components/NotificationBell';
+import CourseDeadlineAlert from './components/CourseDeadlineAlert';
+import ProgressUpdateAlert from './components/ProgressUpdateAlert';
+import AlertsMuteControl from './components/AlertsMuteControl';
+import InstructorView from './components/InstructorView';
 
 const parseDateAsUTC = (dateString: string): Date => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
@@ -37,7 +39,7 @@ const getTodayInElSalvador = (): Date => {
 };
 
 
-export type ActiveView = 'monitor' | 'schedule' | 'verification' | 'certificates' | 'help' | 'tools';
+export type ActiveView = 'monitor' | 'schedule' | 'verification' | 'certificates' | 'help' | 'tools' | 'instructor';
 
 type SyncStatus = {
     time: Date | null;
@@ -129,15 +131,35 @@ const App: React.FC = () => {
     const [isDataLoading, setIsDataLoading] = useState(true);
     const [questions, setQuestions] = useState<CommunityQuestion[]>([]);
     const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
-    const [filters, setFilters] = useState({
-        institution: 'all',
-        department: 'all',
-        status: 'all'
+    const [filters, setFilters] = useState<{
+        institutions: string[];
+        departments: string[];
+        statuses: Status[];
+    }>({
+        institutions: [],
+        departments: [],
+        statuses: [],
     });
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
     const [reportModalStudentId, setReportModalStudentId] = useState<number | null>(null);
-    const { permission, sendNotification } = useNotifications();
+    const [areAlertsMuted, setAreAlertsMuted] = useState(false);
+    const [updatedStudentInfo, setUpdatedStudentInfo] = useState<{ name: string; pointsIncrease: number } | null>(null);
     
+    useEffect(() => {
+        const savedMuteState = localStorage.getItem('alertsMuted');
+        if (savedMuteState === 'true') {
+            setAreAlertsMuted(true);
+        }
+    }, []);
+    
+    const toggleAlertsMuted = () => {
+        setAreAlertsMuted(prev => {
+            const newState = !prev;
+            localStorage.setItem('alertsMuted', String(newState));
+            return newState;
+        });
+    };
+
     const reportModalStudent = useMemo(() => {
         return students.find(s => s.id === reportModalStudentId) || null;
     }, [reportModalStudentId, students]);
@@ -283,6 +305,18 @@ const App: React.FC = () => {
           currentModuleNumber: moduleNumber > 0 ? moduleNumber : 1 
       };
     }, [scheduleUpToToday]);
+    
+    const currentCourseEndDate = useMemo(() => {
+        if (!currentCourseName) return null;
+        const courseDates = schedule
+            .filter(item => item.course === currentCourseName)
+            .map(item => parseDateAsUTC(item.date).getTime());
+        
+        if (courseDates.length === 0) return null;
+
+        const endDate = new Date(Math.max(...courseDates));
+        return endDate.toISOString().split('T')[0];
+    }, [currentCourseName, schedule]);
 
     const processedSchedule: ProcessedScheduleItem[] = useMemo(() => {
         const courseToModulesMap = new Map<string, string[]>();
@@ -538,9 +572,9 @@ const App: React.FC = () => {
 
     const filteredStudents = useMemo(() => {
         return rankedStudents.filter(student => {
-            const institutionMatch = filters.institution === 'all' || student.institucion === filters.institution;
-            const departmentMatch = filters.department === 'all' || student.departamento === filters.department;
-            const statusMatch = filters.status === 'all' || student.status === filters.status;
+            const institutionMatch = filters.institutions.length === 0 || (student.institucion && filters.institutions.includes(student.institucion));
+            const departmentMatch = filters.departments.length === 0 || (student.departamento && filters.departments.includes(student.departamento));
+            const statusMatch = filters.statuses.length === 0 || filters.statuses.includes(student.status);
             return institutionMatch && departmentMatch && statusMatch;
         });
     }, [rankedStudents, filters]);
@@ -683,28 +717,6 @@ const App: React.FC = () => {
         };
     }, [schedule, today]);
 
-    // Notification for upcoming deadlines
-    useEffect(() => {
-        if (permission === 'granted' && nextCourseDeadline) {
-            const deadlineDate = parseDateAsUTC(nextCourseDeadline.date);
-            const todayDate = getTodayInElSalvador();
-            const diffTime = deadlineDate.getTime() - todayDate.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
-            const notificationKey = `deadline-notif-${nextCourseDeadline.date}`;
-            const lastNotified = localStorage.getItem(notificationKey);
-            const todayString = todayDate.toISOString().split('T')[0];
-
-            if (diffDays > 0 && diffDays <= 3 && lastNotified !== todayString) {
-                sendNotification(
-                    'Fecha Límite Próxima', 
-                    `La fecha límite para "${nextCourseDeadline.courseName}" es en ${diffDays} día(s).`
-                );
-                localStorage.setItem(notificationKey, todayString);
-            }
-        }
-    }, [permission, nextCourseDeadline, sendNotification, today]);
-
     const generateWhatsAppLink = useCallback((student: Student, type: string, data?: any): string => {
         if (!student.phone) return '#';
         const name = student.name.split(' ')[0];
@@ -754,18 +766,47 @@ const App: React.FC = () => {
             case 'blank':
                 message = '';
                 break;
+            case 'felicitar':
+                const { courseName: congratulateCourseName } = data;
+                message = `¡Felicidades, ${name}! 🥳 Ha completado con éxito el curso "${congratulateCourseName}". Su dedicación es inspiradora. ¡Siga así! 🎉`;
+                break;
+            case 'felicitar_iniciar':
+                const { courseName: completedCourseName, courseIndex } = data;
+                const nextCourseIndex = courseIndex + 1;
+                if (nextCourseIndex < COURSE_NAMES.length) {
+                    const nextCourseName = COURSE_NAMES[nextCourseIndex];
+                    message = `¡Extraordinario trabajo, ${name}! 🥳 Ha completado el curso "${completedCourseName}". ¡Felicidades! 🚀\n\nAhora es el momento perfecto para dar el siguiente paso. Le animo a iniciar con el curso: *"${nextCourseName}"*.\n\n¡Vamos a por la siguiente meta! 💪`;
+                } else {
+                    message = `¡Increíble, ${name}! 🥳 Ha completado el curso "${completedCourseName}". ¡Y con este, ha finalizado toda la ruta de aprendizaje! ¡Muchísimas felicidades por este gran logro! 🏆`;
+                }
+                break;
+            case 'felicitar_avance':
+                message = `¡Hola ${name}! Solo pasaba para felicitarte por tu excelente avance en la certificación. ¡Sigue así, estás haciendo un trabajo fantástico! 💪`;
+                break;
+            case 'iniciar_curso':
+                const { courseName: startCourseName } = data;
+                message = `Hola ${name}, ¡espero que estés muy bien! Te escribo para animarte a que inicies con el curso: *"${startCourseName}"*. ¡Dar el primer paso es lo más importante! 😊`;
+                break;
+            case 'recordar_tutoria':
+                message = `Hola ${name}, ¿cómo estás? Quería saber si tienes un momento para conectarte a una tutoría y que podamos revisar tus avances o cualquier duda que tengas. ¡Me avisas! 😊\n\nEl enlace de la sesión es: https://meet.google.com/jpj-nibe-hro`;
+                break;
             case 'certificate':
                 const { courseName } = data;
-                message = `¡Felicidades, ${name}! 🥳 Has completado el curso "${courseName}".\n\nPor favor, no olvides subir tu certificado a la carpeta de Drive para que podamos registrarlo. ¡Estás un paso más cerca de la meta! 🚀\n\nEnlace a Drive: https://drive.google.com/drive/folders/18xkVPEYMjsZDAIutOVclhyMNdfwYhQb5?usp=drive_link`;
+                message = `¡Felicidades, ${name}! 🥳 Ha completado el curso "${courseName}".\n\nPor favor, no olvide subir su certificado a la carpeta de Drive para que podamos registrarlo. ¡Está un paso más cerca de la meta! 🚀\n\nEnlace a Drive: https://drive.google.com/drive/folders/18xkVPEYMjsZDAIutOVclhyMNdfwYhQb5?usp=drive_link`;
+                break;
+            case 'recordar_certificado':
+                const { courseNames } = data;
+                const coursesList = courseNames.map(name => `- "${name}"`).join('\n');
+                message = `Hola, ${name}. 👋 Un recordatorio amistoso para que por favor suba los certificados de los siguientes cursos que ya ha completado:\n\n${coursesList}\n\nPuede subirlos en la siguiente carpeta de Drive. ¡Gracias!\n\nEnlace: https://drive.google.com/drive/folders/18xkVPEYMjsZDAIutOVclhyMNdfwYhQb5?usp=drive_link`;
                 break;
             case 'verification':
                 const { pending } = data;
                 const pendingText = pending.join(' y ');
-                message = `Hola, ${name}. 👋 Te recordamos amablemente completar los siguientes pasos de verificación en tu cuenta para asegurar tu progreso:\n\n*${pendingText}*\n\nCompletar esto es muy importante. ¡Gracias! 😊`;
+                message = `Hola, ${name}. 👋 Le recordamos amablemente completar los siguientes pasos de verificación en su cuenta para asegurar su progreso:\n\n*${pendingText}*\n\nCompletar esto es muy importante. ¡Gracias! 😊`;
                 break;
             case 'schedule':
                 const { scheduleText } = data;
-                message = `Hola, ${name}. 📅 Aquí tienes el cronograma sugerido para esta semana para que te mantengas al día:\n\n${scheduleText}\n\n¡Organízate y a seguir aprendiendo! 💪`;
+                message = `Hola, ${name}. 📅 Aquí tiene el cronograma sugerido para esta semana para que se mantenga al día:\n\n${scheduleText}\n\n¡Organícese y a seguir aprendiendo! 💪`;
                 break;
             case 'deadline':
                 const { deadline } = data;
@@ -795,25 +836,29 @@ const App: React.FC = () => {
     
 
     const handleUpdateProgress = (studentId: number, courseIndex: number, newProgress: number) => {
+        const studentToUpdate = students.find(s => s.id === studentId);
+        if (studentToUpdate) {
+            const previousTotalPoints = studentToUpdate.totalPoints;
+            const tempCourseProgress = [...studentToUpdate.courseProgress];
+            tempCourseProgress[courseIndex] = newProgress;
+            const newTotalPoints = tempCourseProgress.reduce((sum, p) => sum + p, 0);
+            const pointsIncrease = newTotalPoints - previousTotalPoints;
+
+            if (pointsIncrease !== 0) {
+                setUpdatedStudentInfo({ name: studentToUpdate.name, pointsIncrease });
+            }
+        }
+
         setStudents(prev =>
             prev.map(s => {
                 if (s.id === studentId) {
                     const previousTotalPoints = s.totalPoints;
-                    const oldStatus = s.status;
 
                     const newCourseProgress = [...s.courseProgress];
                     newCourseProgress[courseIndex] = newProgress;
                     
                     const newTotalPoints = newCourseProgress.reduce((sum, p) => sum + p, 0);
                     const newStatus = calculateStatus(newTotalPoints, s.expectedPoints);
-
-                    // Notification Logic
-                    if (oldStatus !== newStatus && newStatus === Status.Riesgo) {
-                        sendNotification('Estudiante en Riesgo', `${s.name} ha entrado en estado de "En Riesgo".`);
-                    }
-                    if (previousTotalPoints < TOTAL_MAX_POINTS && newTotalPoints === TOTAL_MAX_POINTS) {
-                        sendNotification('¡Certificación Completada!', `¡Felicidades! ${s.name} ha completado la certificación.`);
-                    }
 
                     const lastModification: LastModification = {
                         timestamp: new Date().toISOString(),
@@ -895,21 +940,107 @@ const App: React.FC = () => {
         localStorage.setItem('communityQuestions', JSON.stringify(updatedQuestions));
     };
     
-    const handleFilterChange = (filterType: keyof typeof filters, value: string) => {
-        setFilters(prev => ({ ...prev, [filterType]: value }));
-    };
+    const handleFilterChange = useCallback((filterType: keyof typeof filters, selectedOptions: string[]) => {
+      setFilters(prev => ({
+        ...prev,
+        [filterType]: selectedOptions,
+      }));
+    }, []);
 
-    const resetFilters = () => {
+    const resetFilters = useCallback(() => {
         setFilters({
-            institution: 'all',
-            department: 'all',
-            status: 'all'
+            institutions: [],
+            departments: [],
+            statuses: []
         });
-    };
+    }, []);
 
     const handleSelectStudent = (studentId: number) => setSelectedStudentId(studentId);
     const handleClearSelectedStudent = () => setSelectedStudentId(null);
     
+    const programEndDateInfo = useMemo(() => {
+        if (!nextCourseDeadline) return null;
+
+        const deadlineDate = parseDateAsUTC(nextCourseDeadline.date);
+        const diffTime = deadlineDate.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays < 0) return null; // Safety check
+
+        return {
+            daysRemaining: diffDays,
+            courseName: nextCourseDeadline.courseName,
+        };
+    }, [nextCourseDeadline, today]);
+
+    const motivationalPhrases = [
+        "Cada día es una nueva oportunidad para estar más cerca de tu meta. ¡Sigue adelante!",
+        "La perseverancia no es una carrera larga, son muchas carreras cortas una tras otra. ¡Vamos por la de hoy!",
+        "El éxito es la suma de pequeños esfuerzos repetidos día tras día. ¡Tu esfuerzo cuenta!",
+        "No mires lo que te falta, celebra lo que ya has logrado. ¡Estás más cerca de lo que crees!",
+        "La confianza en ti mismo es el primer secreto del éxito. ¡Cree en tu talento!"
+    ];
+    
+    const [motivationalPhrase] = useState(() => motivationalPhrases[Math.floor(Math.random() * motivationalPhrases.length)]);
+
+    const generateAudioScript = useCallback((student: Student): string => {
+        const firstName = student.name.split(' ')[0];
+        let script = `Hola, ${firstName}. Este es tu reporte de avance en audio. Tu estado actual es ${student.status}. Tienes ${student.totalPoints} puntos. `;
+
+        if (student.status === Status.Atrasada || student.status === Status.Riesgo) {
+            const pointsNeeded = Math.round(student.expectedPoints - student.totalPoints);
+            if (pointsNeeded > 0) {
+                script += `Para ponerte al día, necesitas sumar aproximadamente ${pointsNeeded} ${pointsNeeded === 1 ? 'punto' : 'puntos'}. ¡Ánimo, cada paso cuenta! `;
+            }
+        }
+        
+        const courseNumber = currentCourseName.split('.')[0];
+        script += `Actualmente, el programa se enfoca en el Curso ${courseNumber}, Módulo ${currentModuleNumber}: "${currentModuleName}". `;
+
+        if (currentCourseEndDate) {
+            const endDate = parseDateAsUTC(currentCourseEndDate);
+            const formattedDate = new Intl.DateTimeFormat('es-ES', { dateStyle: 'full', timeZone: 'UTC' }).format(endDate);
+            script += `La fecha de finalización sugerida para este curso es el ${formattedDate}. `;
+        }
+
+        switch(student.status) {
+            case Status.Riesgo:
+                script += "Recuerda, los mayores desafíos traen las mayores recompensas. ¡Estamos aquí para apoyarte en cada paso!";
+                break;
+            case Status.Atrasada:
+                script += "No te desanimes. La perseverancia es clave en tecnología. ¡Organiza tu tiempo, enfócate en el siguiente módulo y verás cómo avanzas!";
+                break;
+            case Status.AlDia:
+                script += "¡Vas muy bien! Mantener el ritmo es un gran logro. Sigue con esa disciplina y constancia.";
+                break;
+            case Status.Avanzada:
+            case Status.EliteI:
+            case Status.EliteII:
+                script += "¡Tu rendimiento es excepcional! Estás demostrando una gran capacidad y liderazgo. Sigue así y llegarás muy lejos.";
+                break;
+            case Status.Finalizada:
+                script += "¡Felicidades por haber completado la certificación! Este es un gran logro y el inicio de una emocionante carrera.";
+                break;
+            default:
+                script += "¡Sigue adelante con tu aprendizaje! Cada lección que completas te acerca más a tu meta.";
+        }
+        return script;
+    }, [currentCourseName, currentModuleName, currentModuleNumber, currentCourseEndDate]);
+
+    const courseEndDates = useMemo(() => {
+        return COURSE_NAMES.map((courseName) => {
+            const courseDates = schedule
+                .filter(item => item.course === courseName)
+                .map(item => parseDateAsUTC(item.date).getTime());
+            
+            if (courseDates.length === 0) return null;
+            
+            const endDate = new Date(Math.max(...courseDates));
+            return endDate;
+        });
+    }, [schedule]);
+
+
     const renderActiveView = () => {
          if (isDataLoading && students.length === 0) { // Only show full-screen loader on initial load
             return (
@@ -927,14 +1058,17 @@ const App: React.FC = () => {
             case 'monitor':
                 return (
                     <div className="space-y-6">
+                        {/* High-level status cards */}
                         <ProgressSummary 
                             expectedPointsToday={expectedPointsToday}
                             currentCourseName={currentCourseName}
                             currentModuleName={currentModuleName}
                             currentModuleNumber={currentModuleNumber}
                         />
-                         <StatusSummary students={finalSortedStudents} />
-                         <FilterControls
+                        <StatusSummary students={finalSortedStudents} expectedPointsToday={expectedPointsToday} />
+                        
+                        {/* Controls and AI analysis before the table */}
+                        <FilterControls
                             institutions={uniqueInstitutions}
                             departments={uniqueDepartments}
                             statuses={orderedStatuses}
@@ -944,6 +1078,9 @@ const App: React.FC = () => {
                             filteredCount={finalSortedStudents.length}
                             totalCount={students.length}
                         />
+                        <AIAnalyzer students={finalSortedStudents} expectedPointsToday={expectedPointsToday} />
+                        
+                        {/* Main leaderboard table */}
                         <LeaderboardTable 
                             students={finalSortedStudents} 
                             initialStudents={initialStudents}
@@ -954,8 +1091,10 @@ const App: React.FC = () => {
                             onSort={handleSort}
                             sortConfig={sortConfig}
                             onOpenReportModal={handleOpenReportModal}
+                            generateAudioScript={generateAudioScript}
                         />
-                        <AIAnalyzer students={finalSortedStudents} expectedPointsToday={expectedPointsToday} />
+                        
+                        {/* Detailed stats graphics at the bottom */}
                         <StatisticsView students={finalSortedStudents} />
                     </div>
                 );
@@ -973,6 +1112,15 @@ const App: React.FC = () => {
                             getExpectedPointsForDate={getExpectedPointsForDate}
                             expectedPointsToday={expectedPointsToday}
                        />;
+            case 'instructor':
+                return <InstructorView 
+                    students={rankedStudents}
+                    courseEndDates={courseEndDates}
+                    today={today}
+                    onOpenReportModal={handleOpenReportModal}
+                    courseNames={COURSE_NAMES}
+                    schedule={processedSchedule}
+                />;
             case 'help':
                  return <HelpView 
                     questions={questions.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime())}
@@ -990,13 +1138,14 @@ const App: React.FC = () => {
     if (selectedStudent && chartData) {
         const isFirstPlace = selectedStudent?.id === studentsSortedByPoints[0]?.id && studentsSortedByPoints.length > 0 && studentsSortedByPoints[0].totalPoints > 0;
         return (
-            <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pb-28">
+            <main className="max-w-[95vw] mx-auto p-4 sm:p-6 lg:p-8 pb-28">
                 <StudentProfileView
                     student={selectedStudent}
                     chartData={chartData}
                     onBack={handleClearSelectedStudent}
                     isFirstPlace={isFirstPlace}
                     schedule={processedSchedule}
+                    generateAudioScript={generateAudioScript}
                 />
             </main>
         )
@@ -1004,7 +1153,22 @@ const App: React.FC = () => {
 
     return (
         <>
-        <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pb-28">
+        {programEndDateInfo && programEndDateInfo.daysRemaining >= 0 && (
+            <CourseDeadlineAlert
+                daysRemaining={programEndDateInfo.daysRemaining}
+                courseName={programEndDateInfo.courseName}
+                motivationalPhrase={motivationalPhrase}
+                isMuted={areAlertsMuted}
+            />
+        )}
+        {!areAlertsMuted && updatedStudentInfo && (
+            <ProgressUpdateAlert
+                studentName={updatedStudentInfo.name}
+                pointsIncrease={updatedStudentInfo.pointsIncrease}
+                onClose={() => setUpdatedStudentInfo(null)}
+            />
+        )}
+        <main className="max-w-[95vw] mx-auto p-4 sm:p-6 lg:p-8 pb-28">
             {activeView === 'monitor' && !selectedStudent && (
                 <div className="mb-8 text-left">
                     <div className="flex justify-between items-start">
@@ -1012,7 +1176,9 @@ const App: React.FC = () => {
                             <h1 className="text-4xl font-extrabold text-gray-900">Monitor de Avance <span className="text-sky-600 font-bold">Google IT Support</span></h1>
                             <p className="text-lg text-gray-500 mt-2">Registro de puntajes y estado de la certificación en tiempo real.</p>
                         </div>
-                        <NotificationBell />
+                        <div className="flex items-center gap-2">
+                           <AlertsMuteControl isMuted={areAlertsMuted} onToggle={toggleAlertsMuted} />
+                        </div>
                     </div>
                 </div>
             )}
@@ -1020,6 +1186,12 @@ const App: React.FC = () => {
                 <div className="mb-8 text-left">
                     <h1 className="text-4xl font-extrabold text-gray-900">Cronograma de Avance</h1>
                     <p className="text-lg text-gray-500 mt-2">Consulta las fechas, módulos y el puntaje esperado para cada día del programa.</p>
+                </div>
+            )}
+            {activeView === 'instructor' && !selectedStudent && (
+                <div className="mb-8 text-left">
+                    <h1 className="text-4xl font-extrabold text-gray-900">Sección del Instructor</h1>
+                    <p className="text-lg text-gray-500 mt-2">Resumen de estudiantes que requieren atención prioritaria.</p>
                 </div>
             )}
            {viewsWithSave.includes(activeView) && !selectedStudent && (
