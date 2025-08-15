@@ -39,8 +39,9 @@ export const STUDENT_PHONE_NUMBERS: { [key: string]: string } = {
     "Fatima Beatriz Masin Aguilar": "50376503426",
     "Adriana Marcela Chacón Reyes": "50372373855",
     "Emeli Lisvea Navarrete Flores": "50374423179",
-    "María Fernanda Martínez Cupido": "50379143566",
     "Ana Milena Cortez Linares": "50378468848",
+    "María Fernanda Martínez Cupido": "50379143566",
+    "Milena Mariana Vasquez Aquino": "50376606559",
     "María José Peraza Peña": "50376527140",
     "Rebeca Michelle Castro Pineda": "50371981227",
     "Alejandra Lisbeth Zavala Calles": "50375417274",
@@ -56,7 +57,7 @@ export const STUDENT_INSTITUTIONS: { [key: string]: string } = {
     "Adriana Marcela Chacón Reyes": "Universidad Don Bosco",
     "Kateryn Estefany Zelada Galicia": "Escuela Monica Herrera",
     "María Fernanda Martínez Cupido": "UCA",
-    "Tania Abigail Barahona Fuentes": "Universidad de Sonsonate",
+    "Tania Abigail Barahona Fuentes": "Universidad Centroamericana José Simeón Cañas-FGK",
     "Laura Rocío Perdomo Ramírez": "UCA",
     "Karla Michelle González González": "Universidad Católica de El Salvador",
     "María José Peraza Peña": "Universidad Gerardo Barrios",
@@ -66,7 +67,8 @@ export const STUDENT_INSTITUTIONS: { [key: string]: string } = {
     "Gabriela Alexandra Alvayeros Guirola": "ITCA FEPADE",
     "Alejandra Lisbeth Zavala Calles": "Universidad Gerardo Barrios",
     "Isabella Gavidia Molina": "Escuela Bilingüe Maquilishuat",
-    "Katherine Alexandra Hernández Suriano": "ESFE"
+    "Katherine Alexandra Hernández Suriano": "ESFE",
+    "Milena Mariana Vasquez Aquino": "USO"
 };
 
 export const STUDENT_DEPARTMENTS: { [key: string]: string } = {
@@ -96,46 +98,54 @@ export const TOTAL_COURSES = 6;
 export const MAX_POINTS_PER_COURSE = 100;
 export const TOTAL_MAX_POINTS = TOTAL_COURSES * MAX_POINTS_PER_COURSE;
 
-export const STATUS_CONFIG: { [key in Status]: { icon: React.ReactNode; color: string; textColor: string } } = {
+export const STATUS_CONFIG: { [key in Status]: { icon: React.ReactNode; color: string; textColor: string; indicatorColor: string; } } = {
     [Status.Finalizada]: {
         icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 17 17 23 15.79 13.88"></polyline></svg>,
         color: 'bg-yellow-100',
         textColor: 'text-yellow-800',
+        indicatorColor: 'bg-yellow-400',
     },
     [Status.EliteII]: {
         icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path><path d="M5 21l-1.18-6.88L2 9.27l6.91-1.01L12 2l3.09 6.26L22 9.27l-5 4.87L18 21"/></svg>,
         color: 'bg-fuchsia-100',
         textColor: 'text-fuchsia-800',
+        indicatorColor: 'bg-fuchsia-400',
     },
     [Status.EliteI]: {
         icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>,
         color: 'bg-violet-100',
         textColor: 'text-violet-800',
+        indicatorColor: 'bg-violet-400',
     },
     [Status.Avanzada]: {
         icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 12-4-4-4 4"/><path d="m14 12v-10"/><path d="M4 12h10"/><path d="M4 20h16"/></svg>,
         color: 'bg-sky-100',
         textColor: 'text-sky-800',
+        indicatorColor: 'bg-sky-400',
     },
     [Status.AlDia]: {
         icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>,
         color: 'bg-green-100',
         textColor: 'text-green-800',
+        indicatorColor: 'bg-green-400',
     },
     [Status.Atrasada]: {
         icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
         color: 'bg-amber-100',
         textColor: 'text-amber-800',
+        indicatorColor: 'bg-amber-400',
     },
     [Status.Riesgo]: {
         icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>,
         color: 'bg-red-100',
         textColor: 'text-red-800',
+        indicatorColor: 'bg-red-400',
     },
     [Status.SinIniciar]: {
         icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="8" y1="12" x2="16" y2="12" /></svg>,
         color: 'bg-gray-200',
         textColor: 'text-gray-800',
+        indicatorColor: 'bg-gray-400',
     }
 };
 

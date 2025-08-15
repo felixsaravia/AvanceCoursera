@@ -21,6 +21,15 @@ const MotivationalMessage: React.FC<MotivationalMessageProps> = ({ student }) =>
 
     switch (status) {
         case Status.Riesgo:
+            config = {
+                icon: <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>,
+                title: `¡Atención, ${firstName}! Hay un desafío por delante`,
+                message: "Tu progreso está en una zona crítica, pero cada experto ha estado aquí. Este es el momento de demostrar tu resiliencia. Estamos aquí para apoyarte. Revisa tu plan de acción y ¡vamos a superarlo juntos!",
+                bgColor: 'bg-red-50',
+                borderColor: 'border-red-500',
+                iconColor: 'text-red-600',
+            };
+            break;
         case Status.Atrasada:
             config = {
                 icon: <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>,

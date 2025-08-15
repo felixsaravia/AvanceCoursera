@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Student, Status } from '../types';
-import { STATUS_CONFIG, orderedStatuses } from '../constants';
+import { STATUS_CONFIG, orderedStatuses, COURSE_NAMES, COURSE_SHORT_NAMES } from '../constants';
 
 interface DonutChartProps {
   data: {
@@ -102,6 +102,31 @@ const StatCard: React.FC<{
   );
 };
 
+const CourseStatCard: React.FC<{
+    courseName: string;
+    fullName: string;
+    completed: number;
+    total: number;
+}> = ({ courseName, fullName, completed, total }) => {
+    const isAllCompleted = completed === total && total > 0;
+    return (
+        <div className={`p-4 rounded-lg border text-center transition-colors duration-300 ${isAllCompleted ? 'bg-green-50 border-green-200 shadow-sm' : 'bg-gray-50 border-gray-200'}`}>
+            <p className={`text-xs font-bold truncate ${isAllCompleted ? 'text-green-800' : 'text-gray-700'}`} title={fullName}>{courseName}</p>
+            <p className={`text-3xl font-bold mt-2 ${isAllCompleted ? 'text-green-900' : 'text-gray-900'}`}>{completed} <span className="text-base font-medium text-gray-500">/ {total}</span></p>
+        </div>
+    );
+};
+
+const CHART_COLORS: { [key in Status]: string } = {
+    [Status.Finalizada]: 'text-yellow-400',
+    [Status.EliteII]: 'text-fuchsia-400',
+    [Status.EliteI]: 'text-violet-400',
+    [Status.Avanzada]: 'text-sky-400',
+    [Status.AlDia]: 'text-green-400',
+    [Status.Atrasada]: 'text-orange-400',
+    [Status.Riesgo]: 'text-red-500',
+    [Status.SinIniciar]: 'text-gray-400',
+};
 
 const StatisticsView: React.FC<StatisticsViewProps> = ({ students }) => {
     
@@ -113,8 +138,9 @@ const StatisticsView: React.FC<StatisticsViewProps> = ({ students }) => {
                 donutChartData: orderedStatuses.map(status => ({
                     label: status,
                     value: 0,
-                    color: STATUS_CONFIG[status].textColor,
+                    color: CHART_COLORS[status],
                 })),
+                courseCompletions: [],
             };
         }
 
@@ -131,13 +157,24 @@ const StatisticsView: React.FC<StatisticsViewProps> = ({ students }) => {
         const donutChartData = orderedStatuses.map(status => ({
             label: status,
             value: statusCounts[status] || 0,
-            color: STATUS_CONFIG[status].textColor,
+            color: CHART_COLORS[status],
         }));
+        
+        const courseCompletions = COURSE_NAMES.map((name, index) => {
+            const completedCount = students.filter(s => s.courseProgress[index] === 100).length;
+            return {
+                name: COURSE_SHORT_NAMES[index],
+                fullName: name,
+                completed: completedCount,
+                total: students.length,
+            };
+        });
 
         return {
             averageScore,
             completedCount,
             donutChartData,
+            courseCompletions,
         };
 
     }, [students]);
@@ -145,26 +182,43 @@ const StatisticsView: React.FC<StatisticsViewProps> = ({ students }) => {
     return (
         <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mt-6">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Estadísticas Gráficas del Grupo</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                <div className="bg-gray-50/50 p-6 rounded-lg border border-gray-200/80 h-full flex flex-col justify-center">
-                    <h3 className="font-bold text-lg text-gray-900 mb-4 text-center">Distribución de Estado</h3>
-                    <DonutChart data={stats.donutChartData} totalValue={students.length} />
+            <div className="space-y-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                    <div className="bg-gray-50/50 p-6 rounded-lg border border-gray-200/80 h-full flex flex-col justify-center">
+                        <h3 className="font-bold text-lg text-gray-900 mb-4 text-center">Distribución de Estado</h3>
+                        <DonutChart data={stats.donutChartData} totalValue={students.length} />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <StatCard
+                            icon={<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-sky-500"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>}
+                            title="Promedio del Grupo"
+                            value={stats.averageScore.toFixed(1)}
+                            description="Puntos en promedio"
+                            colorClass="bg-sky-50 border-sky-200"
+                        />
+                         <StatCard
+                            icon={<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-500"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>}
+                            title="Certificación Completada"
+                            value={stats.completedCount}
+                            description="Estudiantes que finalizaron"
+                            colorClass="bg-yellow-50 border-yellow-200"
+                        />
+                    </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <StatCard
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-sky-500"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>}
-                        title="Promedio del Grupo"
-                        value={stats.averageScore.toFixed(1)}
-                        description="Puntos en promedio"
-                        colorClass="bg-sky-50 border-sky-200"
-                    />
-                     <StatCard
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-500"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>}
-                        title="Certificación Completa"
-                        value={stats.completedCount}
-                        description={stats.completedCount === 1 ? "estudiante ha finalizado" : "estudiantes han finalizado"}
-                        colorClass="bg-yellow-50 border-yellow-200"
-                    />
+
+                <div>
+                    <h3 className="font-bold text-lg text-gray-900 mb-4">Finalización por Curso</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                        {stats.courseCompletions.map(course => (
+                           <CourseStatCard 
+                            key={course.fullName}
+                            courseName={course.name}
+                            fullName={course.fullName}
+                            completed={course.completed}
+                            total={course.total}
+                           />
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>
